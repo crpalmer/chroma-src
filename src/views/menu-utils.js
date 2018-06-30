@@ -1571,7 +1571,7 @@ function _generateMSFGradientView() {
                             msf.loadingOffset = printer.loadingOffset;
 
                             let pairLength = minLength + maxLength;
-                            let pairCount = Math.ceil((printLength - lastSpliceLength) / pairLength);
+                            let pairCount = Math.ceil((printLength - firstSpliceLength - lastSpliceLength) / pairLength);
 
                             let lengthA;
                             let lengthB;

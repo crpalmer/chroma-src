@@ -675,7 +675,7 @@ class TransitionTower {
         let towerUpdated = false;
         let updatedLayers = {};
 
-        if (this.rafts.useRaft) {
+        if (this.rafts.useRaft && this.rafts.raftLayers > this.towerLayerHeights.length) {
             let z = this.towerLayerHeights[this.rafts.raftLayers];
             let layerTransitionCount = this.layerStats[z].transitions.length;
             let layerPurgeLength = ((this.rafts.raftLayers < this.zigguratLayerCount) ? zigguratPurgeLength : purgeLength)

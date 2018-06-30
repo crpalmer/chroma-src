@@ -455,6 +455,13 @@ async function addOEMData(raft, msf) {
             length: splice[1]
         }));
     }
+    if (global.pingOptions.useMechanicalPings) {
+        for (let ping of msf.pingList) {
+            raft.insertInstruction(new Raft.OPingDataInstruction({
+                length: ping[0]
+            }));
+        }
+    }
     raft.insertInstruction(new Raft.OStartMulticolorInstruction({}));
     if (printTemp > 0) {
         raft.insertInstruction(new Raft.SetToolheadTemperatureInstruction({
@@ -1336,6 +1343,10 @@ class Print {
         let nextPingStart = PING_MIN_SPACING;
         let nextPingEnd = nextPingStart + PING_EXTRUSION_LENGTH;
         let currentlyPinging = false;
+        let mechPingInstructions = [];
+        if (global.pingOptions.useMechanicalPings) {
+            mechPingInstructions = raft.parser.parse(printer.mechanicalPingGCode);
+        }
 
         if (DEBUG.console) {
             console.log("");
@@ -1635,21 +1646,36 @@ class Print {
             if ((totalExtrusion * 0.97) + effectiveLoadingOffset < (totalPrintLength * 1.03)) {
                 if (global.env.oem) {
                     if (totalExtrusion >= nextPingStart) {
-                        raft.insertInstruction(new Raft.DwellInstruction({
-                            duration: 0
-                        }));
-                        raft.insertInstruction(new Raft.OPingDataInstruction({
-                            length: totalExtrusion
-                        }));
+                        if (global.pingOptions.useMechanicalPings) {
+                            for (let instruction of mechPingInstructions) {
+                                raft.insertInstruction(instruction);
+                            }
+                        } else {
+                            raft.insertInstruction(new Raft.DwellInstruction({
+                                duration: 0
+                            }));
+                            raft.insertInstruction(new Raft.OPingDataInstruction({
+                                length: totalExtrusion
+                            }));
+                        }
                         msf.pingList.push([totalExtrusion + firmwarePurge]);
                         lastPingStart = totalExtrusion;
                         nextPingStart = getNextPingStartValue(lastPingStart);
                     }
                 } else {
-                    if (currentlyPinging) {
-                        checkPingSequenceEnd();
+                    if (global.pingOptions.useMechanicalPings) {
+                        for (let instruction of mechPingInstructions) {
+                            raft.insertInstruction(instruction);
+                        }
+                        msf.pingList.push([totalExtrusion + firmwarePurge]);
+                        lastPingStart = totalExtrusion;
+                        nextPingStart = getNextPingStartValue(lastPingStart);
                     } else {
-                        checkPingSequenceStart();
+                        if (currentlyPinging) {
+                            checkPingSequenceEnd();
+                        } else {
+                            checkPingSequenceStart();
+                        }
                     }
                 }
             }
@@ -2054,7 +2080,7 @@ class Print {
                 }
                 if (currentInstruction.toolhead !== currentTool) {
 
-                    if (totalLayerToolChanges === 0) {
+                    if (totalLayerToolChanges === 0 || layerToolChangeCounter === totalLayerToolChanges) {
                         let nextTowerIndex = tower.towerLayerHeights.indexOf(lastTowerLayer) + 1;
                         raft.stepBackward();
                         raft.deleteInstruction();
@@ -2286,6 +2312,10 @@ class Print {
         // ping-related constants, counters, and flags
         let lastPingStart = 0;
         let nextPingStart = PING_MIN_SPACING;
+        let mechPingInstructions = [];
+        if (global.pingOptions.useMechanicalPings) {
+            mechPingInstructions = raft.parser.parse(printer.mechanicalPingGCode);
+        }
 
         if (DEBUG.console) {
             console.log("");
@@ -2410,163 +2440,175 @@ class Print {
             let cumulative = currentE.coordinateMode === Raft.CoordinateModes.Absolute;
             if (global.env.oem) {
                 if (totalExtrusion >= nextPingStart) {
-                    raft.insertInstruction(new Raft.DwellInstruction({
-                        duration: 0
-                    }));
-                    raft.insertInstruction(new Raft.OPingDataInstruction({
-                        length: totalExtrusion
-                    }));
+                    if (global.pingOptions.useMechanicalPings) {
+                        for (let instruction of mechPingInstructions) {
+                            raft.insertInstruction(instruction);
+                        }
+                    } else {
+                        raft.insertInstruction(new Raft.DwellInstruction({
+                            duration: 0
+                        }));
+                        raft.insertInstruction(new Raft.OPingDataInstruction({
+                            length: totalExtrusion
+                        }));
+                    }
                     msf.pingList.push([totalExtrusion + firmwarePurge]);
                     lastPingStart = totalExtrusion;
                     nextPingStart = getNextPingStartValue(lastPingStart);
                 }
             } else {
                 if (totalExtrusion >= nextPingStart) {
-                    if (!currentlyTransitioning) {
-                        moveToDumpPosition();
-                        currentE = raft.getCurrentState().get("extrusion");
-                    }
-                    let currentExtrusion = currentE.position;
-                    if (purgeInPlace) {
-                        if (DEBUG.comments) {
-                            raft.insertInstruction(new Raft.EmptyInstruction({
-                                comment: " ping " + (msf.pingList.length + 1) + " pause 1"
-                            }));
-                            raft.insertInstruction(new Raft.EmptyInstruction({
-                                comment: " totalE = " + raft.getCurrentState().get("extrusion").totalDispensed
-                            }));
-                        }
-                        let moveDuration = 0;
-                        if (!currentlyTransitioning || transitionExtrusionSoFar === 0) {
-                            moveDuration = getLineLength(
-                                lastPrintX,
-                                lastPrintY,
-                                raft.getCurrentState().get("x").position,
-                                raft.getCurrentState().get("y").position) * 60 * 1000 / speeds.rapidXY;
-                        }
-                        if (printer.jogPauses) {
-                            insertJogPause(Math.round(PING_PAUSE_1_LENGTH - moveDuration), purgeInPlaceJogDirection);
-                        } else {
-                            insertDwellPause(raft, Math.round(PING_PAUSE_1_LENGTH - moveDuration));
-                        }
-                        let purgeFeedrate = purgeSpeed * 60;
-                        let eParam = (cumulative ? roundTo(currentExtrusion + PING_EXTRUSION_LENGTH, 5) : roundTo(PING_EXTRUSION_LENGTH, 5));
-                        if (printer.engine === "tiertime") {
-                            eParam = roundTo(eParam * printer.extruderStepsPerMM, 5);
-                        }
-                        raft.insertInstruction(new Raft.LinearMoveInstruction({
-                            extrusion: eParam,
-                            feedrate: purgeFeedrate
-                        }));
-
-                        raft.insertInstruction(new Raft.LinearMoveInstruction({
-                        }));
-                        if (DEBUG.comments) {
-                            raft.insertInstruction(new Raft.EmptyInstruction({
-                                comment: " ping " + (msf.pingList.length + 1) + " pause 2"
-                            }));
-                            raft.insertInstruction(new Raft.EmptyInstruction({
-                                comment: " totalE = " + raft.getCurrentState().get("extrusion").totalDispensed
-                            }));
-                        }
-                        moveDuration = 0;
-                        if (!currentlyTransitioning || transitionExtrusionSoFar + PING_EXTRUSION_LENGTH >= totalTransitionExtrusion) {
-                            moveDuration = getLineLength(
-                                lastPrintX,
-                                lastPrintY,
-                                raft.getCurrentState().get("x").position,
-                                raft.getCurrentState().get("y").position) * 60 * 1000 / speeds.rapidXY;
-                        }
-                        if (printer.jogPauses) {
-                            insertJogPause(Math.round(PING_PAUSE_2_LENGTH - moveDuration), purgeInPlaceJogDirection);
-                        } else {
-                            insertDwellPause(raft, Math.round(PING_PAUSE_2_LENGTH - moveDuration));
+                    if (global.pingOptions.useMechanicalPings) {
+                        for (let instruction of mechPingInstructions) {
+                            raft.insertInstruction(instruction);
                         }
                     } else {
-                        if (nextPurgeDirection === null) {
-                            if (purgeEdge === "north" || purgeEdge === "south") {
-                                nextPurgeDirection = "east";
+                        if (!currentlyTransitioning) {
+                            moveToDumpPosition();
+                            currentE = raft.getCurrentState().get("extrusion");
+                        }
+                        let currentExtrusion = currentE.position;
+                        if (purgeInPlace) {
+                            if (DEBUG.comments) {
+                                raft.insertInstruction(new Raft.EmptyInstruction({
+                                    comment: " ping " + (msf.pingList.length + 1) + " pause 1"
+                                }));
+                                raft.insertInstruction(new Raft.EmptyInstruction({
+                                    comment: " totalE = " + raft.getCurrentState().get("extrusion").totalDispensed
+                                }));
+                            }
+                            let moveDuration = 0;
+                            if (!currentlyTransitioning || transitionExtrusionSoFar === 0) {
+                                moveDuration = getLineLength(
+                                    lastPrintX,
+                                    lastPrintY,
+                                    raft.getCurrentState().get("x").position,
+                                    raft.getCurrentState().get("y").position) * 60 * 1000 / speeds.rapidXY;
+                            }
+                            if (printer.jogPauses) {
+                                insertJogPause(Math.round(PING_PAUSE_1_LENGTH - moveDuration), purgeInPlaceJogDirection);
                             } else {
-                                nextPurgeDirection = "north";
+                                insertDwellPause(raft, Math.round(PING_PAUSE_1_LENGTH - moveDuration));
                             }
-                        }
-                        if (DEBUG.comments) {
-                            raft.insertInstruction(new Raft.EmptyInstruction({
-                                comment: " ping " + (msf.pingList.length + 1) + " pause 1"
-                            }));
-                            raft.insertInstruction(new Raft.EmptyInstruction({
-                                comment: " totalE = " + raft.getCurrentState().get("extrusion").totalDispensed
-                            }));
-                        }
-                        let moveDuration = 0;
-                        if (!currentlyTransitioning || transitionExtrusionSoFar === 0) {
-                            moveDuration = getLineLength(
-                                lastPrintX,
-                                lastPrintY,
-                                raft.getCurrentState().get("x").position,
-                                raft.getCurrentState().get("y").position) * 60 * 1000 / speeds.rapidXY;
-                        }
-                        if (printer.jogPauses) {
-                            insertJogPause(Math.round(PING_PAUSE_1_LENGTH - moveDuration), nextPurgeDirection);
-                        } else {
-                            insertDwellPause(raft, Math.round(PING_PAUSE_1_LENGTH - moveDuration));
-                        }
-                        let currentX = raft.getCurrentState().get("x").position;
-                        let currentY = raft.getCurrentState().get("y").position;
-                        let nextX = currentX;
-                        let nextY = currentY;
-                        if (nextPurgeDirection === "north") {
-                            nextY = currentY + 5;
-                        } else if (nextPurgeDirection === "south") {
-                            nextY = currentY - 5;
-                        } else if (nextPurgeDirection === "west") {
-                            nextX = currentX - 5;
-                        } else if (nextPurgeDirection === "east") {
-                            nextX = currentX + 5;
-                        }
-                        let totalJogs = 5;
-                        let jogPerTransition = PING_EXTRUSION_LENGTH / 10;
-                        let eParam = (cumulative ? (currentExtrusion + jogPerTransition) : jogPerTransition);
-                        for (let i = 0; i < totalJogs; i++) {
-                            raft.insertInstruction(new Raft.LinearMoveInstruction({
-                                x: nextX,
-                                y: nextY,
-                                extrusion: roundTo(eParam, 5),
-                                feedrate: 600
-                            }));
-                            if (cumulative) {
-                                eParam += jogPerTransition;
+                            let purgeFeedrate = purgeSpeed * 60;
+                            let eParam = (cumulative ? roundTo(currentExtrusion + PING_EXTRUSION_LENGTH, 5) : roundTo(PING_EXTRUSION_LENGTH, 5));
+                            if (printer.engine === "tiertime") {
+                                eParam = roundTo(eParam * printer.extruderStepsPerMM, 5);
                             }
                             raft.insertInstruction(new Raft.LinearMoveInstruction({
-                                x: currentX,
-                                y: currentY,
-                                extrusion: roundTo(eParam, 5),
-                                feedrate: 600
+                                extrusion: eParam,
+                                feedrate: purgeFeedrate
                             }));
-                            if (cumulative) {
-                                eParam += jogPerTransition;
+
+                            raft.insertInstruction(new Raft.LinearMoveInstruction({
+                            }));
+                            if (DEBUG.comments) {
+                                raft.insertInstruction(new Raft.EmptyInstruction({
+                                    comment: " ping " + (msf.pingList.length + 1) + " pause 2"
+                                }));
+                                raft.insertInstruction(new Raft.EmptyInstruction({
+                                    comment: " totalE = " + raft.getCurrentState().get("extrusion").totalDispensed
+                                }));
                             }
-                        }
-                        if (DEBUG.comments) {
-                            raft.insertInstruction(new Raft.EmptyInstruction({
-                                comment: " ping " + (msf.pingList.length + 1) + " pause 2"
-                            }));
-                            raft.insertInstruction(new Raft.EmptyInstruction({
-                                comment: " totalE = " + raft.getCurrentState().get("extrusion").totalDispensed
-                            }));
-                        }
-                        moveDuration = 0;
-                        if (!currentlyTransitioning || transitionExtrusionSoFar + PING_EXTRUSION_LENGTH >= totalTransitionExtrusion) {
-                            moveDuration = getLineLength(
-                                lastPrintX,
-                                lastPrintY,
-                                raft.getCurrentState().get("x").position,
-                                raft.getCurrentState().get("y").position) * 60 * 1000 / speeds.rapidXY;
-                        }
-                        if (printer.jogPauses) {
-                            insertJogPause(Math.round(PING_PAUSE_2_LENGTH - moveDuration), nextPurgeDirection);
+                            moveDuration = 0;
+                            if (!currentlyTransitioning || transitionExtrusionSoFar + PING_EXTRUSION_LENGTH >= totalTransitionExtrusion) {
+                                moveDuration = getLineLength(
+                                    lastPrintX,
+                                    lastPrintY,
+                                    raft.getCurrentState().get("x").position,
+                                    raft.getCurrentState().get("y").position) * 60 * 1000 / speeds.rapidXY;
+                            }
+                            if (printer.jogPauses) {
+                                insertJogPause(Math.round(PING_PAUSE_2_LENGTH - moveDuration), purgeInPlaceJogDirection);
+                            } else {
+                                insertDwellPause(raft, Math.round(PING_PAUSE_2_LENGTH - moveDuration));
+                            }
                         } else {
-                            insertDwellPause(raft, Math.round(PING_PAUSE_2_LENGTH - moveDuration));
+                            if (nextPurgeDirection === null) {
+                                if (purgeEdge === "north" || purgeEdge === "south") {
+                                    nextPurgeDirection = "east";
+                                } else {
+                                    nextPurgeDirection = "north";
+                                }
+                            }
+                            if (DEBUG.comments) {
+                                raft.insertInstruction(new Raft.EmptyInstruction({
+                                    comment: " ping " + (msf.pingList.length + 1) + " pause 1"
+                                }));
+                                raft.insertInstruction(new Raft.EmptyInstruction({
+                                    comment: " totalE = " + raft.getCurrentState().get("extrusion").totalDispensed
+                                }));
+                            }
+                            let moveDuration = 0;
+                            if (!currentlyTransitioning || transitionExtrusionSoFar === 0) {
+                                moveDuration = getLineLength(
+                                    lastPrintX,
+                                    lastPrintY,
+                                    raft.getCurrentState().get("x").position,
+                                    raft.getCurrentState().get("y").position) * 60 * 1000 / speeds.rapidXY;
+                            }
+                            if (printer.jogPauses) {
+                                insertJogPause(Math.round(PING_PAUSE_1_LENGTH - moveDuration), nextPurgeDirection);
+                            } else {
+                                insertDwellPause(raft, Math.round(PING_PAUSE_1_LENGTH - moveDuration));
+                            }
+                            let currentX = raft.getCurrentState().get("x").position;
+                            let currentY = raft.getCurrentState().get("y").position;
+                            let nextX = currentX;
+                            let nextY = currentY;
+                            if (nextPurgeDirection === "north") {
+                                nextY = currentY + 5;
+                            } else if (nextPurgeDirection === "south") {
+                                nextY = currentY - 5;
+                            } else if (nextPurgeDirection === "west") {
+                                nextX = currentX - 5;
+                            } else if (nextPurgeDirection === "east") {
+                                nextX = currentX + 5;
+                            }
+                            let totalJogs = 5;
+                            let jogPerTransition = PING_EXTRUSION_LENGTH / 10;
+                            let eParam = (cumulative ? (currentExtrusion + jogPerTransition) : jogPerTransition);
+                            for (let i = 0; i < totalJogs; i++) {
+                                raft.insertInstruction(new Raft.LinearMoveInstruction({
+                                    x: nextX,
+                                    y: nextY,
+                                    extrusion: roundTo(eParam, 5),
+                                    feedrate: 600
+                                }));
+                                if (cumulative) {
+                                    eParam += jogPerTransition;
+                                }
+                                raft.insertInstruction(new Raft.LinearMoveInstruction({
+                                    x: currentX,
+                                    y: currentY,
+                                    extrusion: roundTo(eParam, 5),
+                                    feedrate: 600
+                                }));
+                                if (cumulative) {
+                                    eParam += jogPerTransition;
+                                }
+                            }
+                            if (DEBUG.comments) {
+                                raft.insertInstruction(new Raft.EmptyInstruction({
+                                    comment: " ping " + (msf.pingList.length + 1) + " pause 2"
+                                }));
+                                raft.insertInstruction(new Raft.EmptyInstruction({
+                                    comment: " totalE = " + raft.getCurrentState().get("extrusion").totalDispensed
+                                }));
+                            }
+                            moveDuration = 0;
+                            if (!currentlyTransitioning || transitionExtrusionSoFar + PING_EXTRUSION_LENGTH >= totalTransitionExtrusion) {
+                                moveDuration = getLineLength(
+                                    lastPrintX,
+                                    lastPrintY,
+                                    raft.getCurrentState().get("x").position,
+                                    raft.getCurrentState().get("y").position) * 60 * 1000 / speeds.rapidXY;
+                            }
+                            if (printer.jogPauses) {
+                                insertJogPause(Math.round(PING_PAUSE_2_LENGTH - moveDuration), nextPurgeDirection);
+                            } else {
+                                insertDwellPause(raft, Math.round(PING_PAUSE_2_LENGTH - moveDuration));
+                            }
                         }
                     }
                     msf.pingList.push([totalExtrusion + firmwarePurge]);
