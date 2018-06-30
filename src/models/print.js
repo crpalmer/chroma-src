@@ -894,22 +894,17 @@ class Print {
             await progressBar.increment("Calculating bounding box");
         }
 
+	boundingBox.xMax = -Infinity;
+	boundingBox.xMin = Infinity;
+	boundingBox.yMax = -Infinity;
+	boundingBox.yMin = Infinity;
+
         raft.rewind();
         await raft.play(async function (instruction, state) {
 
             if ((instruction instanceof Raft.MoveInstruction) && !(instruction instanceof Raft.HomeInstruction)) {
                 if (instruction.x !== null || instruction.y !== null) {
                     let currentZ = state.get("z").position;
-                    raft.stepBackward();
-                    let previousZ = raft.getCurrentState().get("z").position;
-                    raft.stepForward();
-                    if (currentZ !== null && previousZ > currentZ
-                        && layerStats[previousZ] !== undefined && layerStats[previousZ].printLayer) {
-                        boundingBox.xMax = -Infinity;
-                        boundingBox.xMin = Infinity;
-                        boundingBox.yMax = -Infinity;
-                        boundingBox.yMin = Infinity;
-                    }
                     if (printLayerHeights.indexOf(currentZ) >= 0) {
                         let currentE = state.get("extrusion").position;
                         raft.stepBackward();
