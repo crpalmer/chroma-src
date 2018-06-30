@@ -1,0 +1,2177 @@
+html {
+    margin: 0;
+    padding: 0;
+}
+
+body {
+    margin: 0;
+    padding: 0;
+    overflow: hidden;
+    font: menu;
+    font-size: 80%;
+    cursor: default;
+    -webkit-user-select: none;
+    -moz-user-select: none;
+    -ms-user-select: none;
+    user-select: none;
+    -webkit-font-feature-settings: "kern" 1;
+    -moz-font-feature-settings:    "kern" 1;
+    -ms-font-feature-settings:     "kern" 1;
+    font-feature-settings:         "kern" 1;
+    background-color: #fff;
+}
+
+a[href] {
+    color: #4db9e7;
+}
+
+#errorText {
+    color: red;
+}
+
+.divider {
+    width: 0;
+    padding: 5px 0;
+    margin-left: 10px;
+    margin-right: 10px;
+    border-left: 1px solid #ddd;
+    display: inline;
+}
+
+#loadingView {
+    position: fixed;
+    z-index: 9999;
+    width: 100%;
+    height: 100%;
+    opacity: 0;
+    background-color: rgba(0, 0, 0, 0.6);
+    transition: opacity 200ms ease-in;
+    pointer-events: none;
+}
+
+#loadingBar {
+    width: 500px;
+    height: 30px;
+    position: fixed;
+    top: 45%;
+    left: 50%;
+    margin-top: -15px;
+    margin-left: -250px;
+    border: solid 1px #fff;
+    box-sizing: border-box;
+}
+
+#loadingBarComplete {
+    height: 30px;
+    width: 0;
+    position: fixed;
+    top: 45%;
+    left: 50%;
+    margin-top: -15px;
+    margin-left: -250px;
+    box-sizing: border-box;
+    background-color: #fff;
+}
+
+.progressPiece {
+    height: 30px;
+    width: 0;
+    position: fixed;
+    top: 45%;
+    left: 50%;
+    margin-top: -15px;
+    margin-left: -250px;
+    box-sizing: border-box;
+    background-color: #fff;
+}
+
+#loadingMessage {
+    color: #fff;
+    position: fixed;
+    top: 45%;
+    left: 0;
+    right: 0;
+    margin-top: 40px;
+    padding-left: 50px;
+    padding-right: 50px;
+    font-size: 1.2em;
+    text-align: center;
+}
+
+.topbar {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 60px;
+    z-index: 100;
+    padding: 5px 10px;
+    background: #fff;
+    border-bottom: 1px #4db9e7 solid;
+}
+
+.topbar select {
+    outline: none;
+}
+
+.leftTools {
+    position: absolute;
+    padding: 5px 10px;
+    background: #fff;
+}
+
+.leftTools svg {
+    transform: translate(0%, 20%);
+    padding-right: 5px;
+}
+
+.rightTools {
+    position: absolute;
+    right: 0;
+    padding: 5px 10px;
+    background: #fff;
+}
+
+.paletteSelect {
+    display: none;
+}
+
+.printerSelect {
+    display: inline;
+}
+
+#loadCodeWrapper {
+    display: inline;
+}
+
+#mainPrinterSelect {
+    width: 165px;
+}
+
+#content #editActivePrinter {
+    padding: 0;
+    width: 2em;
+    height: 2em;
+    border-radius: 50%;
+    text-align: center;
+    position: relative;
+    top: 1px;
+    color: #fff;
+    background-color: #aaa;
+    border: none;
+}
+
+#editActivePrinter::before {
+    font-size: 1.3em;
+    content: "\270E";
+}
+
+.driveColor {
+    display: inline-block;
+    background-color: #888;
+    color: #fff;
+    margin-right: 13px;
+    border-radius: 13px 2px 2px 13px;
+    position: relative;
+    bottom: -6px;
+}
+
+#content .driveColorButton {
+    display: inline-block;
+    line-height: 1;
+    width: 20px;
+    height: 20px;
+    border: none !important;
+    border-radius: 50%;
+    margin: 3px 6px 3px 3px;
+    padding: 0;
+    cursor: pointer;
+    -webkit-appearance: none;
+    outline: none !important;
+}
+
+#content .driveNumber {
+    padding-left: 2px;
+    padding-right: 10px;
+    position: relative;
+    bottom: 5px;
+}
+
+/*#content .driveLabel {
+    display: inline-block;
+    padding-left: 2px;
+    padding-right: 10px;
+    position: relative;
+    bottom: 5px;
+}*/
+
+.driveOptions {
+    position: absolute;
+    z-index: 1000;
+    top: 100%;
+    margin-top: 10px;
+    left: 0;
+    color: #000;
+    width: 75px;
+    background-color: #fff;
+    text-align: center;
+    border: 1px #4db9e7 solid;
+    padding-top: 2px;
+    padding-bottom: 2px;
+}
+
+.driveOptions::before,
+.driveOptions::after {
+    content: "";
+    position: absolute;
+    bottom: 100%;
+    display: block;
+    width: 0;
+    height: 0;
+}
+
+.driveOptions::before {
+    left: 5px;
+    border-bottom: solid 8px #4db9e7;
+    border-left: solid 8px transparent;
+    border-right: solid 8px transparent;
+}
+
+.driveOptions::after {
+    left: 6px;
+    border-bottom: solid 7px #fff;
+    border-left: solid 7px transparent;
+    border-right: solid 7px transparent;
+}
+
+.driveOptions.hidden {
+    display: none;
+}
+
+.driveOption {
+    display: inline-block;
+    width: 20px;
+    height: 20px;
+    border-radius: 10px;
+    border: solid 1px transparent;
+    margin: 2px 2px 0 2px;
+    overflow: hidden;
+    background-color: #fff;
+    cursor: pointer;
+    text-align: center;
+    line-height: 1.65;
+    box-sizing: border-box;
+}
+
+.colorStrengthSlider {
+    position: relative;
+    margin: 10px 5px;
+}
+
+.colorStrengthSlider input {
+    width: 100%;
+    margin: 0;
+}
+
+.colorStrengthSlider .rangeMinLabel,
+.colorStrengthSlider .rangeMaxLabel {
+    position: absolute;
+    top: 100%;
+    margin-top: -5px;
+    width: auto;
+    font-size: 0.7em;
+    opacity: 0.5;
+}
+
+.colorStrengthSlider .rangeMinLabel {
+    left: 0;
+}
+
+.colorStrengthSlider .rangeMaxLabel {
+    right: 0;
+}
+
+.driveMaterialSelect {
+    position: relative;
+    bottom: 5px;
+    cursor: pointer;
+    display: inline-block;
+    padding-right: 3px;
+}
+
+.driveMaterialSelect::after {
+    content: "";
+    display: inline-block;
+    position: relative;
+    top: -2px;
+    margin-left: 3px;
+    width: 0;
+    height: 0;
+    border-top: solid 4px #fff;
+    border-left: solid 4px transparent;
+    border-right: solid 4px transparent;
+}
+
+.driveMaterialLabel {
+    display: inline-block;
+    font-size: 0.9em;
+}
+
+.driveMaterials {
+    position: absolute;
+    z-index: 1000;
+    top: 100%;
+    margin-top: 10px;
+    left: -7px;
+    color: #000;
+    background-color: #fff;
+    text-align: left;
+    border: 1px #4db9e7 solid;
+    padding: 4px 4px 0;
+    cursor: default;
+}
+
+.driveMaterials > div {
+    white-space: nowrap;
+    margin-bottom: 4px;
+    padding-left: 10px;
+    cursor: pointer;
+    position: relative;
+    max-width: 250px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.driveMaterials > div[data-checked='1']::before {
+    content: "";
+    display: block;
+    position: absolute;
+    left: 1px;
+    top: 2px;
+    width: 3px;
+    height: 6px;
+    border: solid #000;
+    border-width: 0 2px 2px 0;
+    transform: rotate(45deg);
+}
+
+.driveMaterials.hidden {
+    display: none;
+}
+
+.driveMaterials::before,
+.driveMaterials::after {
+    content: "";
+    position: absolute;
+    bottom: 100%;
+    display: block;
+    width: 0;
+    height: 0;
+}
+
+.driveMaterials::before {
+    left: 5px;
+    border-bottom: solid 8px #4db9e7;
+    border-left: solid 8px transparent;
+    border-right: solid 8px transparent;
+}
+
+.driveMaterials::after {
+    left: 6px;
+    border-bottom: solid 7px #fff;
+    border-left: solid 7px transparent;
+    border-right: solid 7px transparent;
+}
+
+#content div.sidebar {
+    width: 20%;
+    float: left;
+}
+
+#content div.sidebar-box {
+    float: left;
+    width: 100%;
+    height: auto;
+    margin-left: 15px;
+    margin-top: 15px;
+    padding: 20px;
+    border: #7c0ac6 1px solid;
+}
+
+#content div.main-box {
+    width: 65%;
+    float: right;
+    margin-top: 15px;
+    margin-right: 15px;
+    padding: 20px;
+    border: #7c0ac6 1px solid;
+}
+
+#content h2 {
+    margin-top: 10px;
+    margin-bottom: 10px;
+    letter-spacing: 0.03em;
+}
+
+#content h3 {
+    font-weight: normal;
+}
+
+.calibrationWizard h3 {
+    position: relative;
+    top: -8px;
+}
+
+#content h4 {
+    display: block;
+    margin: 0;
+    padding: 0;
+}
+
+#content button {
+    font-family: inherit;
+    font-size: 0.8rem;
+    padding: 0.3em 0.8em 0.3em;
+    font-weight: 500;
+    background-color: #eee;
+    border: 1px solid #4db9e7;
+    margin: 10px 0;
+    cursor: pointer;
+    outline: none;
+}
+
+#content button:focus {
+    outline-color: -webkit-focus-ring-color;
+    outline-style: auto;
+}
+
+#content button:active {
+    outline: none;
+}
+
+#content button:active {
+    background-color: #ddd;
+}
+
+#content button.confirm {
+    background-color: #459ac6;
+    border-color: #459ac6;
+    color: #fff;
+}
+
+#content button.confirm:active {
+    background-color: #447ea9;
+}
+
+#content button.danger {
+    background-color: #c62c3e;
+    border-color: #c62c3e;
+    color: #fff;
+}
+
+#content button.danger:active {
+    background-color: #b72c3d;
+}
+
+#content button.linkButton {
+    font-size: inherit;
+    padding: 0;
+    font-weight: inherit;
+    text-transform: inherit;
+    background-color: transparent;
+    border: none;
+    margin: 0;
+    color: #4db9e7;
+    display: inline-block;
+}
+
+#content button:disabled {
+    cursor: default;
+    opacity: 0.7;
+}
+
+#content li {
+    margin-bottom: 4px;
+}
+
+#content th {
+    vertical-align: top;
+    text-align: left;
+    padding-top: 10px;
+    width: 180px;
+    font-weight: 500;
+}
+
+.preferences .longLabel {
+    padding-left: 25px;
+    position: relative;
+}
+
+.preferences .longLabel input[type='checkbox'] {
+    position: absolute;
+    left: 0;
+    margin-right: 0;
+}
+
+.preferenceDescription {
+    font-size: 0.85em;
+}
+
+.formInput,
+.formInputDisabled,
+.formInputHalfWidth {
+    display: block;
+    width: 100%;
+    -webkit-box-sizing: border-box;
+    -moz-box-sizing: border-box;
+    box-sizing: border-box;
+    font-family: inherit;
+    font-size: 18px;
+    font-weight: normal;
+    margin-top: 3px;
+    margin-bottom: 12px;
+    border: 1px solid #ccc;
+    padding: 3px;
+    outline: none;
+    color: inherit;
+}
+
+.formInputColor {
+    -webkit-appearance: none;
+    padding: 0;
+    margin-top: 6px;
+    margin-bottom: 15px;
+}
+
+.formInputColor::-webkit-color-swatch-wrapper {
+    padding: 0;
+}
+
+.formInputColor::-webkit-color-swatch {
+    border: none;
+    background-color: attr(value);
+}
+
+textarea.formInput {
+    height: 60px;
+    resize: vertical;
+}
+
+.formInputDisabled {
+    opacity: 0.3;
+    background-color: transparent;
+}
+
+.labelDisabled {
+    color: rgba(0, 0, 0, 0.3);
+}
+
+.formSectionDisabled {
+    color: rgba(0, 0, 0, 0.3);
+}
+
+.formSectionDisabled .formInput {
+    color: #000;
+    opacity: 0.3;
+}
+
+.rangeInput {
+    display: block;
+    width: 100%;
+    margin-top: 8px;
+    margin-bottom: 16px;
+}
+
+.rangePreview {
+    display: flex;
+    flex-direction: row;
+    flex-wrap: nowrap;
+}
+
+.rangePreview > .range {
+    flex-basis: 0;
+    flex-grow: 1;
+    padding-right: 10px;
+}
+
+.rangePreview > .preview {
+    width: 60px;
+    flex-grow: 0;
+    padding-top: 3px;
+}
+
+.rangePreview > .preview input {
+    font-size: 0.9em;
+    border: none;
+    background-color: transparent;
+    text-align: right;
+    -webkit-user-select: none;
+    -moz-user-select: none;
+    -ms-user-select: none;
+    user-select: none;
+    pointer-events: none;
+}
+
+.halfWidth,
+.formInputHalfWidth {
+    display: inline-table;
+    width: 48%;
+    margin: 0;
+}
+
+.halfWidth:first-child,
+.formInputHalfWidth:first-child {
+    margin-right: 4%;
+}
+
+#printBedDimensions,
+.checkboxGroup {
+    margin-top: 3px;
+    margin-bottom: 12px;
+}
+
+.checkboxGroup {
+    display: block;
+}
+
+.checkboxGroup input {
+    margin-right: 10px;
+}
+
+td .checkboxGroup:first-child {
+    margin-top: 8px;
+}
+
+#content .formButton {
+    margin-top: 5px;
+    margin-bottom: 15px;
+}
+
+select[multiple] {
+    width: 100%;
+    display: inline;
+}
+
+.formSelect {
+    width: 100%;
+    display: block;
+    font: inherit;
+    font-size: 16px;
+    background-color: #fff;
+    border: 1px solid #ccc;
+    border-radius: 0 !important;
+    -webkit-box-sizing: border-box;
+    -moz-box-sizing: border-box;
+    box-sizing: border-box;
+    margin-top: 3px;
+    margin-bottom: 12px;
+}
+
+.success {
+    color: green;
+}
+
+.error {
+    color: red;
+}
+
+.formError.invalid .formInput,
+.formError.invalid .formButton {
+    background-color: #fcc !important;
+}
+
+.formError {
+    position: relative;
+}
+
+.formError.invalid[data-error]:hover::before {
+    content: attr(data-error);
+    position: absolute;
+    bottom: 100%;
+    margin-bottom: 7px;
+    display: block;
+    font-size: 0.8rem;
+    padding: 0.4em;
+    white-space: nowrap;
+    background-color: red;
+    color: #fff;
+}
+
+.formError.invalid[data-error]:hover::after {
+    content: "";
+    position: absolute;
+    bottom: 100%;
+    left: 8px;
+    margin-bottom: 2px;
+    display: block;
+    width: 0;
+    height: 0;
+    border-top: solid 6px red;
+    border-left: solid 6px transparent;
+    border-right: solid 6px transparent;
+}
+
+#open-modal {
+    position: fixed;
+    font-family: inherit;
+    font-size: 1.1em;
+    top: 0;
+    right: -20px;
+    bottom: 0;
+    left: -20px;
+    background: rgba(0, 0, 0, 0.6);
+    z-index: 999;
+    opacity: 0;
+    transition: opacity 400ms linear;
+    pointer-events: none;
+    overflow-y: scroll;
+}
+
+div.container {
+    margin: 0 auto;
+}
+
+#profileSetupWindow {
+    position: fixed;
+    z-index: 200;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.6);
+    transition: opacity 400ms linear;
+    font-size: 1.1em;
+    opacity: 0;
+    pointer-events: none;
+}
+
+#profileSetupWindow .container {
+    width: 600px;
+    margin: 10% auto;
+    padding: 13px 20px 13px 20px;
+    background: #fff;
+    border: 1px solid #4db9e7;
+}
+
+.profileList,
+#firmwareView {
+    width: 600px;
+    margin: 10% auto;
+    padding: 13px 20px 13px 20px;
+    background: #fff;
+    border: 1px solid #4db9e7;
+}
+
+#firmwareView {
+    width: 500px;
+    padding-bottom: 30px;
+}
+
+#firmwareView {
+    position: relative;
+}
+
+#firmwareView #errorText {
+    display: inline-block;
+    padding-left: 20px;
+}
+
+.firmwareWarning {
+    color: #da0000;
+}
+
+#scanningProgress {
+    margin-top: 30px;
+}
+
+.profileList table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 30px;
+    margin-bottom: 15px;
+}
+
+.hoverHighlight:hover {
+    background-color: #ddd;
+}
+
+.profileList table td {
+    width: 1px;
+}
+
+.profileList table td:first-child {
+    padding-left: 5px;
+}
+
+.profileList table td:last-child {
+    padding-right: 5px;
+}
+
+.profileList table td.colExpand {
+    width: auto;
+    max-width: 350px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+#content .profileList table button {
+    margin: 5px 0 5px 5px;
+}
+
+.save {
+    width: 400px;
+    margin: 10% auto;
+    padding: 13px 20px 13px 20px;
+    background: #fff;
+    border: 1px solid #4db9e7;
+}
+
+.printerProfile {
+    width: 600px;
+    margin: 5% auto;
+    padding: 13px 20px 13px 20px;
+    background: #fff;
+    border: 1px solid #4db9e7;
+}
+
+.generateCustomMSF {
+    width: 500px;
+    margin: 5% auto;
+    padding: 13px 20px 13px 20px;
+    background: #fff;
+    border: 1px solid #4db9e7;
+}
+
+.printerProfile table {
+    table-layout: fixed;
+}
+
+.printerProfile td {
+    vertical-align: top;
+}
+
+.printerProfile label {
+    position: relative;
+    top: 1px;
+}
+
+.calibrationWizard {
+    width: 600px;
+    height: 480px;
+    margin: 5% auto;
+    padding: 13px 20px 13px 20px;
+    background: #fff;
+    border: 1px solid #4db9e7;
+    position: relative;
+}
+
+.paneScrollBox {
+    width: auto;
+    height: 300px;
+    overflow-y: scroll;
+    padding: 10px;
+    border: 1px solid #ccc;
+}
+
+.wizardBottomLabel {
+    position: absolute;
+    bottom: 60px;
+    left: 20px;
+    right: 20px;
+}
+
+.paneButtons .leftPane {
+    position: absolute;
+    bottom: 0;
+    left: 20px;
+}
+
+.paneButtons .rightPane {
+    position: absolute;
+    bottom: 0;
+    right: 20px;
+}
+
+#content .paneButtons .leftPane button {
+    margin-right: 8px;
+}
+
+#content .paneButtons .rightPane button {
+    margin-left: 8px;
+}
+
+#content .inlineContent {
+    display: flex;
+}
+
+#content #printLength {
+    display: block;
+    flex-grow: 1;
+    pointer-events: none;
+    border: none;
+    padding-left: 10px;
+    -webkit-user-select: none;
+    -moz-user-select: none;
+    -ms-user-select: none;
+    user-select: none;
+}
+
+#content .closeButton {
+    font-family: inherit;
+    font-size: 12px;
+    padding: 5px 10px;
+    font-weight: 600;
+    text-transform: uppercase;
+    background-color: transparent !important;
+    border: none;
+    margin: 10px 0;
+    cursor: pointer;
+    outline: none !important;
+    float: right;
+}
+
+
+.rangeMinLabel,
+.rangeMidLabel,
+.rangeMaxLabel {
+    position: relative;
+    top: -15px;
+    opacity: 0.3;
+}
+
+.rangeMinLabel,
+.rangeMaxLabel {
+    width: 5em;
+}
+
+.rangeMinLabel {
+    float: left;
+}
+
+.rangeMaxLabel {
+    float: right;
+    text-align: right;
+}
+
+.rangeMidLabel {
+    text-align: center;
+}
+
+.clearfix {
+    position: static;
+    display: block;
+    clear: both;
+}
+
+#vizBox {
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    left: 0;
+    right: 0;
+}
+
+#content #processCode {
+    margin-right: 10px;
+}
+
+#content #forceRegenerateTower {
+    position: fixed;
+    top: 70px;
+    right: 20px;
+    z-index: 1000;
+}
+
+.preformatted {
+    font-family: Courier, "Lucida Console", monospace;
+    font-size: 12px;
+}
+
+#tutorial {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    z-index: 500;
+}
+
+.tutorialBox,
+.tutorialStartBox {
+    position: absolute;
+    background-color: #fff;
+    border: 1px solid #4db9e7;
+    padding: 10px;
+}
+
+.tutorialBox::before,
+.tutorialBox::after {
+    content: "";
+    position: absolute;
+    bottom: 100%;
+    display: block;
+    width: 0;
+    height: 0;
+}
+
+.tutorialStartBox {
+    width: 400px;
+}
+
+.tutorialBox {
+    width: 350px;
+}
+
+.tutorialBox .closeButton {
+    position: absolute;
+    top: 3px;
+    right: 0;
+    opacity: 0.7;
+}
+
+.tutorialBox::before {
+    left: 25px;
+    border-bottom: solid 15px #4db9e7;
+    border-left: solid 15px transparent;
+    border-right: solid 15px transparent;
+}
+
+.tutorialBox::after {
+    left: 26px;
+    border-bottom: solid 14px #fff;
+    border-left: solid 14px transparent;
+    border-right: solid 14px transparent;
+}
+
+.tutorialBoxRight::before {
+    left: auto;
+    right: 25px;
+}
+
+.tutorialBoxRight::after {
+    left: auto;
+    right: 26px;
+}
+
+.tutorialStartBox {
+    top: 80px;
+    left: 20px;
+}
+
+.tutorialBox h3,
+.tutorialStartBox h3 {
+    margin-top: 0;
+}
+
+.tutorialBox p:last-child {
+    margin-bottom: 0;
+}
+
+.tutorialBox button,
+.tutorialStartBox button {
+    margin-top: 0 !important;
+    margin-bottom: 0 !important;
+}
+
+.tooltip[data-tooltip] {
+    position: relative;
+}
+
+.tooltip[data-tooltip]::after {
+    content: "?";
+    display: inline-block;
+    margin-left: 5px;
+    background-color: #aaa;
+    color: #fff;
+    width: 1.2em;
+    height: 1.2em;
+    text-align: center;
+    line-height: 1.2em;
+    font-size: 0.8em;
+    border-radius: 50%;
+    font-weight: bold;
+}
+
+h3 .tooltip[data-tooltip]::after {
+    position: relative;
+    top: -2px;
+    margin-left: 8px;
+}
+
+#content button.usePresetDefault,
+#content button.useMaterialDefault {
+    position: relative;
+    background-color: #49bf3a;
+    border-radius: 50%;
+    display: inline-block;
+    margin-left: 5px;
+    width: 1.2em;
+    height: 1.2em;
+    padding: 0;
+    border: none;
+    line-height: 1.2em;
+    margin-top: 0;
+    margin-bottom: 0;
+    text-align: center;
+    -webkit-box-sizing: border-box;
+    -moz-box-sizing: border-box;
+    box-sizing: border-box;
+    color: #fff;
+    outline: none;
+}
+
+#content button.usePresetDefault::after,
+#content button.useMaterialDefault::after {
+    content: "↺";
+}
+
+.tooltip[data-tooltip]:hover::before,
+#content button.usePresetDefault:hover::before,
+#content button.useMaterialDefault:hover::before {
+    position: absolute;
+    top: 100%;
+    margin-top: 10px;
+    left: -3px;
+    width: 280px;
+    content: attr(data-tooltip);
+    font-size: 0.75rem;
+    background-color: #fffcef;
+    border: solid 1px #4db9e7;
+    pointer-events: none;
+    z-index: 100;
+    padding: 4px 6px;
+    text-align: left;
+    color: #000;
+}
+
+#content button.usePresetDefault:hover::before,
+#content button.useMaterialDefault:hover::before {
+    width: auto;
+    white-space: nowrap;
+}
+
+#content button.usePresetDefault:hover::before {
+    content: "Reset to base model value";
+}
+
+#content button.useMaterialDefault:hover::before {
+    content: "Reset to default";
+}
+
+#content button.usePresetDefault:active,
+#content button.useMaterialDefault:active {
+    background-color: #3f9f32;
+}
+
+#content button.arrowIconButton {
+    display: inline-block;
+    margin-left: 5px;
+    background-color: #459ac6;
+    border: none;
+    color: #fff;
+    width: 1.2em;
+    height: 1.2em;
+    padding: 0;
+    text-align: center;
+    line-height: 1.2em;
+    font-size: 0.8em;
+    border-radius: 50%;
+    font-weight: bold;
+}
+
+#content button.arrowIconButton:active {
+    background-color: #447ea9;
+}
+
+#content button.arrowIconButton::before {
+    content: '→';
+}
+
+.betaLabel {
+    background-color: #444;
+    margin: -5px 0 -7px -8px;
+    padding: 5px 0 7px 8px;
+    color: #eee;
+    border-radius: 5px;
+}
+
+.betaLabel::after {
+    content: "beta";
+    text-transform: uppercase;
+    padding-left: 5px;
+    padding-right: 3px;
+    font-size: 0.8em;
+    font-weight: bold;
+    opacity: 0.85;
+    position: relative;
+    top: -5px;
+}
+
+@-webkit-keyframes pulse {
+    0% {
+        opacity: 0.25;
+    }
+    10% {
+        opacity: 0.25;
+    }
+    50% {
+        opacity: 0.75;
+    }
+    90% {
+        opacity: 0.25;
+    }
+    100% {
+        opacity: 0.25;
+    }
+}
+
+#firmwareUpdateSpinner {
+    position: absolute;
+    bottom: 20px;
+    right: 15px;
+    white-space: nowrap;
+    color: rgba(0, 0, 0, 0.5);
+    line-height: 2em;
+    display: none;
+}
+
+#firmwareUpdateSpinner::after {
+    content: "";
+    display: inline-block;
+    width: 2rem;
+    height: 2rem;
+    background-image: url('mosaic-app-icon.png');
+    background-size: contain;
+    -webkit-animation: pulse 3s infinite ease-in-out;
+    position: relative;
+    bottom: -10px;
+    margin-left: 5px;
+}
+
+#portList {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+}
+
+#portList table {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+.portListItem {
+
+}
+
+.portListItem div {
+    display: inline-block;
+}
+
+.portListItem button {
+    display: inline-block;
+    margin-left: 10px !important;
+}
+
+#updates {
+    padding: 0 15px;
+}
+
+#updateAnimation {
+    position: fixed;
+    bottom: 30px;
+    left: 20px;
+    padding-left: 3px;
+    padding-right: 3px;
+    font-size: 1.1em;
+    color: rgba(0, 0, 0, 0.5);
+    display: none;
+    pointer-events: none;
+    -webkit-font-smoothing: antialiased;
+}
+
+#updateAnimationProgressBar {
+    position: absolute;
+    top: 100%;
+    left: 0;
+    right: 0;
+    margin-top: 5px;
+    height: 4px;
+    border: solid 1px #40a1c8;
+    border-radius: 4px;
+}
+
+#updateAnimationProgress {
+    background-color: #40a1c8;
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    left: 0;
+    width: 30%;
+}
+
+#updateNotifications {
+    position: fixed;
+    z-index: 8000;
+    top: 0;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    padding-top: 100px;
+    padding-bottom: 100px;
+    background-color: rgba(0, 0, 0, 0.1);
+    display: none;
+}
+
+#updateDialog {
+    padding: 15px;
+    width: 550px;
+    border: solid 1px #4db9e7;
+}
+
+#dataCollectionDialog {
+    padding: 15px;
+    width: 550px;
+    border: solid 1px #4db9e7;
+    background-color: #fff;
+    margin-left: auto;
+    margin-right: auto;
+}
+
+#dataCollectionDialog h3 {
+    color: #4db9e7;
+    font-size: 1.5em;
+    font-weight: 400;
+    margin-top: 10px;
+}
+
+.buttonList {
+    margin-top: 10px;
+}
+
+.buttonList::after {
+    content: "";
+    display: block;
+    clear: both;
+}
+
+.buttonList > .left {
+    float: left;
+}
+
+.buttonList > .right {
+    float: right;
+}
+
+.buttonList > .left button {
+    margin-right: 10px !important;
+}
+
+.buttonList > .right button {
+    margin-left: 10px !important;
+}
+
+#updateChangelog {
+    width: 100%;
+    height: 300px;
+    overflow-y: scroll;
+    -webkit-overflow-scrolling: touch;
+    border: solid 1px #ccc;
+    padding: 8px;
+    -webkit-box-sizing: border-box;
+    -moz-box-sizing: border-box;
+    box-sizing: border-box;
+    -webkit-user-select: text;
+    -moz-user-select: text;
+    -ms-user-select: text;
+    user-select: text;
+    cursor: text;
+}
+
+#updateDialog h2 {
+    letter-spacing: 0;
+    margin-top: 0;
+    margin-bottom: 20px;
+}
+
+.release {
+    margin-bottom: 20px;
+}
+
+.release:last-child {
+    margin-bottom: 0;
+}
+
+.release h2 {
+    font-size: 1em;
+    font-weight: 500 !important;
+    margin-top: 20px !important;
+    margin-bottom: 10px !important;
+}
+
+.release h3 {
+    margin-top: 0;
+    margin-bottom: 10px;
+    font-weight: 500 !important;
+}
+
+.release h4 {
+    float: right;
+    position: relative;
+    top: 3px;
+    font-weight: normal;
+}
+
+.release ul,
+.release ol {
+    padding-left: 25px;
+}
+
+.release li {
+    margin-top: 5px;
+    margin-bottom: 5px;
+}
+
+.selectable {
+    -webkit-user-select: auto;
+    -moz-user-select: all;
+    -ms-user-select: all;
+    user-select: all;
+    cursor: text;
+}
+
+#content .tabs {
+    list-style: none;
+    padding: 0;
+}
+
+#content .tabs button,
+#content .tabs li {
+    display: inline-block;
+    border: none;
+    background-color: transparent;
+    font-size: 1.2em;
+    padding-left: 1px;
+    padding-right: 1px;
+    margin-right: 18px;
+    border-bottom: solid 2px transparent;
+    outline: none !important;
+    cursor: pointer;
+}
+
+#content .tabs button:hover,
+#content .tabs button:focus,
+#content .tabs li:hover,
+#content .tabs li:focus {
+    border-bottom-color: #999;
+}
+
+#content .tabs button.active,
+#content .tabs li.active {
+    border-bottom-color: #4db9e7;
+}
+
+#content .tabbed .content {
+    min-height: 100px;
+}
+
+#printBedPreviewRectangular,
+#printBedPreviewRectangular2,
+#printBedPreviewCircular {
+    padding-bottom: 50px;
+}
+
+#printBedPreviewRectangular,
+#printBedPreviewRectangular2 {
+    padding-right: 80px;
+}
+
+#printBedPreviewRectangular2 {
+    padding-top: 50px;
+}
+
+#printBedPreviewRectangularBed,
+#printBedPreviewRectangularBed2,
+#printBedPreviewCircularBed {
+    background-color: #ccc;
+    position: relative;
+    margin-left: auto;
+    margin-right: auto;
+}
+
+#printBedPreviewRectangularBed .xLabel,
+#printBedPreviewRectangularBed2 .southLabel,
+#printBedPreviewCircularBed .diameterLabel {
+    position: absolute;
+    top: auto;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    padding-bottom: 5px;
+    text-align: center;
+}
+
+#printBedPreviewCircularBed .diameterLabel {
+    margin-bottom: 5px;
+}
+
+#printBedPreviewRectangularBed2 .northLabel {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    padding-top: 5px;
+    text-align: center;
+}
+
+#printBedPreviewRectangularBed .yLabel,
+#printBedPreviewRectangularBed2 .eastLabel {
+    position: absolute;
+    top: 50%;
+    margin-top: -10px;
+    right: 0;
+    padding-right: 5px;
+}
+
+#printBedPreviewRectangularBed2 .westLabel {
+    position: absolute;
+    top: 50%;
+    margin-top: -10px;
+    left: 0;
+    padding-left: 5px;
+}
+
+#printBedPreviewRectangularBed .xInput,
+#printBedPreviewRectangularBed2 .southInput,
+#printBedPreviewCircularBed .diameterInput {
+    position: absolute;
+    top: 100%;
+    margin-top: 5px;
+    left: 0;
+    right: 0;
+    text-align: center;
+    white-space: nowrap;
+}
+
+#printBedPreviewRectangularBed2 .northInput {
+    position: absolute;
+    bottom: 100%;
+    margin-bottom: -5px;
+    left: 0;
+    right: 0;
+    text-align: center;
+    white-space: nowrap;
+}
+
+#printBedPreviewRectangularBed .yInput,
+#printBedPreviewRectangularBed2 .eastInput {
+    position: absolute;
+    top: 50%;
+    margin-top: -18px;
+    left: 100%;
+    margin-left: 7px;
+    white-space: nowrap;
+}
+
+#printBedPreviewRectangularBed2 .westInput {
+    position: absolute;
+    top: 50%;
+    margin-top: -18px;
+    right: 100%;
+    margin-right: 7px;
+    white-space: nowrap;
+}
+
+#printBedPreviewRectangularOrigin,
+#printBedPreviewCircularOrigin {
+    width: 0;
+    height: 0;
+    position: absolute;
+    border: solid 3px rgb(196, 0, 0);
+    border-radius: 50%;
+}
+
+#sideTransitionNorthOffsetPreview,
+#sideTransitionWestOffsetPreview,
+#sideTransitionEastOffsetPreview,
+#sideTransitionSouthOffsetPreview,
+#sideTransitionNWOffsetPreview,
+#sideTransitionSWOffsetPreview,
+#sideTransitionNEOffsetPreview,
+#sideTransitionSEOffsetPreview {
+    -webkit-box-sizing: border-box;
+    -moz-box-sizing: border-box;
+    box-sizing: border-box;
+    position: absolute;
+    background-color: rgba(255, 0, 0, 0.25);
+    background-image: repeating-linear-gradient(
+            315deg,
+            rgba(0, 0, 0, 0),
+            rgba(0, 0, 0, 0) 10px,
+            rgba(196, 0, 0, 0.5) 10px,
+            rgba(196, 0, 0, 0.5) 11px
+    );
+}
+
+#sideTransitionNorthOffsetPreview,
+#sideTransitionSouthOffsetPreview {
+    left: 0;
+    right: 0;
+}
+
+#sideTransitionWestOffsetPreview,
+#sideTransitionEastOffsetPreview {
+    top: 0;
+    bottom: 0;
+}
+
+#sideTransitionNorthOffsetPreview,
+#sideTransitionNWOffsetPreview,
+#sideTransitionNEOffsetPreview {
+    top: auto;
+    bottom: 100%;
+}
+
+#sideTransitionSouthOffsetPreview,
+#sideTransitionSEOffsetPreview,
+#sideTransitionSWOffsetPreview {
+    top: 100%;
+}
+
+#sideTransitionWestOffsetPreview,
+#sideTransitionNWOffsetPreview,
+#sideTransitionSWOffsetPreview {
+    right: 100%;
+}
+
+#sideTransitionEastOffsetPreview,
+#sideTransitionNEOffsetPreview,
+#sideTransitionSEOffsetPreview {
+    left: 100%;
+}
+
+#about {
+    margin: 0;
+    padding: 0;
+}
+
+.aboutContent {
+    position: fixed;
+    top: 0;
+    bottom: 0;
+    left: 0;
+    right: -20px;
+    padding: 15px 100px 15px 15px;
+    overflow-y: scroll;
+}
+
+.splashContent {
+    padding: 23px 26px 40px;
+    background-color: #fff;
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    border-radius: 8px;
+}
+
+.aboutContent::before,
+.aboutContent::after {
+    content: "";
+    display: block;
+    position: fixed;
+    z-index: 5;
+    left: 0;
+    right: 0;
+    height: 30px;
+    pointer-events: none;
+}
+
+.aboutContent::before {
+    bottom: -2px;
+    background: -webkit-linear-gradient(top, rgba(255, 255, 255, 0), #fff);
+}
+
+.aboutContent::after {
+    top: -5px;
+    background: -webkit-linear-gradient(top, #fff, rgba(255, 255, 255, 0));
+}
+
+.aboutLogo {
+    position: fixed;
+    z-index: 10;
+    bottom: 0;
+    right: -25px;
+    width: 150px;
+    height: 200px;
+    background: url('mosaic-app-icon.png') no-repeat top center;
+    background-size: 160%;
+    opacity: 0.5;
+}
+
+.splashLogo {
+    position: absolute;
+    z-index: 10;
+    bottom: -20px;
+    right: -5px;
+    width: 220px;
+    height: 500px;
+    background-image: url('mosaic-app-icon.png');
+    background-position: bottom center;
+    background-size: 160%;
+    background-repeat: no-repeat;
+}
+
+#about h1 {
+    margin-top: 0;
+    margin-bottom: 5px;
+}
+
+#splash {
+    background-color: transparent;
+    pointer-events: none;
+}
+
+#splash h1 {
+    margin-top: 0;
+    margin-bottom: 5px;
+    font-size: 4em;
+    font-weight: 600;
+}
+
+#about h1 .version {
+    font-weight: 400;
+    margin-left: 0.5em;
+    font-size: 0.7em;
+    position: relative;
+    bottom: 0.05em;
+    color: #777;
+}
+
+#about .build {
+    font-weight: 500;
+    color: #4db9e7;
+}
+
+#splash h1 .version {
+    font-weight: 400;
+    margin-left: 0.6em;
+    font-size: 0.65em;
+    position: relative;
+    bottom: 0.04em;
+    color: #777;
+}
+
+#splash .build {
+    font-weight: 400;
+    font-size: 2em;
+    margin-left: 3px;
+    margin-top: 10px;
+    color: #4db9e7;
+}
+
+#splash .bottom {
+    position: absolute;
+    bottom: 15px;
+    left: 29px;
+}
+
+#about h3 {
+    margin-top: 0;
+    font-weight: 600;
+}
+
+#about table th {
+    text-align: left;
+    font-weight: 500;
+    padding-right: 10px;
+    vertical-align: top;
+}
+
+#about table th,
+#about table td {
+    padding-bottom: 8px;
+}
+
+#about table ul {
+    margin: 0;
+    padding: 0;
+    list-style: none;
+}
+
+#about table li {
+    margin-bottom: 4px;
+}
+
+#about table li:last-child {
+    margin-bottom: 0;
+}
+
+#about .contributor {
+    padding-left: 25px;
+    padding-top: 3px;
+    padding-bottom: 3px;
+}
+
+#about .contributorThumbnail {
+    background: no-repeat top left;
+    background-size: 20px;
+}
+
+#about .specialThanks {
+    padding-bottom: 2px;
+}
+
+#msf-editor {
+    overflow-y: auto;
+    padding: 50px 10px 10px;
+}
+
+#msf-editor table {
+    width: 100%;
+    text-align: left;
+}
+
+#msf-editor td,
+#msf-editor th {
+    vertical-align: top;
+    padding-top: 5px;
+    padding-bottom: 5px;
+}
+
+#msf-editor .formInput {
+    font-size: inherit;
+    margin: 0;
+}
+
+.msf-editor-toolbar {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    padding: 10px;
+    border-bottom: 1px #4db9e7 solid;
+    background-color: #fff;
+    z-index: 100;
+}
+
+.msf-editor-toolbar .checkboxGroup {
+    margin: 0;
+}
+
+.msf-section-collapse::after {
+    content: "";
+    position: relative;
+    display: inline-block;
+    width: 0;
+    height: 0;
+    top: -1px;
+    margin-left: 10px;
+    border-top: solid 8px #888;
+    border-left: solid 5px transparent;
+    border-right: solid 5px transparent;
+}
+
+.msf-section-collapse.collapsed::after {
+    top: -2px;
+    border-top: none;
+    border-bottom: solid 8px #888;
+    border-left: solid 5px transparent;
+    border-right: solid 5px transparent;
+}
+
+.msf-section-collapse:active::after {
+    border-top-color: #000;
+    border-bottom-color: #000;
+}
+
+.msf-editor-tooltip {
+    position: relative;
+}
+
+.msf-editor-tooltip[data-tooltip]:hover::before {
+    content: attr(data-tooltip);
+    position: absolute;
+    bottom: 100%;
+    margin-left: -5px;
+    margin-bottom: 2px;
+    display: block;
+    font-size: 0.8rem;
+    padding: 0.4em;
+    white-space: nowrap;
+    background-color: #888;
+    color: #fff;
+    pointer-events: none;
+    z-index: 500;
+}
+
+.msf-editor-tooltip[data-tooltip]:hover::after {
+    content: "";
+    position: absolute;
+    bottom: 100%;
+    left: -2px;
+    margin-bottom: -3px;
+    display: block;
+    width: 0;
+    height: 0;
+    border-top: solid 6px #888;
+    border-left: solid 6px transparent;
+    border-right: solid 6px transparent;
+    pointer-events: none;
+    z-index: 500;
+}
+
+#portScanMode {
+    position: absolute;
+    bottom: 5px;
+    left: 15px;
+}
+
+#portScanMode,
+#portScanMode label {
+    outline: none;
+}
+
+.dualFileTable {
+    text-align: center;
+    margin-left: auto;
+    margin-right: auto;
+}
+
+.dualFileTable th,
+.dualFileTable td {
+    padding-left: 20px;
+    padding-right: 20px;
+    width: 300px;
+}
+
+.dualFileTable td.dualFileTableName > span,
+.fileGridName > span {
+    display: block;
+    width: 220px;
+    margin-left: auto;
+    margin-right: auto;
+    text-align: center;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    -webkit-box-sizing: border-box;
+    box-sizing: border-box;
+}
+
+.outputFileGridOneRow {
+    table-layout: fixed;
+    text-align: center;
+    margin-left: auto;
+    margin-right: auto;
+    margin-bottom: 20px;
+}
+
+.outputFileGridOneRow td,
+.outputFileGridOneRow th {
+    vertical-align: middle;
+}
+
+.outputFileGridArrowBlue,
+.outputFileGridArrowPurple {
+    width: 50px;
+    background: no-repeat center center;
+    background-size: 30px;
+}
+
+.outputFileGridArrowBlue {
+    background-image: url("./arrow-blue.svg");
+}
+
+.outputFileGridArrowPurple {
+    background-image: url("./arrow-purple.svg");
+}
+
+.fileIconPreviewLarge {
+    display: inline-block;
+    width: 48px;
+    height: 48px;
+    background-size: contain;
+    background-position: center;
+}
+
+.imageGallery {
+    display: flex;
+    flex-direction: row;
+    flex-wrap: nowrap;
+    margin-left: auto;
+    margin-right: auto;
+}
+
+.imageGalleryControl {
+    display: flex;
+    flex-grow: 0;
+    flex-shrink: 0;
+    align-items: center;
+    padding-left: 10px;
+    padding-right: 10px;
+}
+
+#content .imageGalleryPrev,
+#content .imageGalleryNext {
+    -webkit-appearance: none;
+    border: none;
+    border-radius: 50%;
+    background-color: #aaa;
+    display: flex;
+    width: 36px;
+    height: 36px;
+    flex-grow: 0;
+    flex-shrink: 0;
+    justify-content: center;
+    align-items: center;
+}
+
+#content .imageGalleryPrev:disabled,
+#content .imageGalleryNext:disabled {
+    opacity: 0.4;
+}
+
+#content .imageGalleryPrev::before,
+#content .imageGalleryNext::before {
+    display: block;
+    content: "";
+    width: 0;
+    height: 0;
+    border-top: solid 8px transparent;
+    border-bottom: solid 8px transparent;
+    position: relative;
+}
+
+#content .imageGalleryPrev::before {
+    border-right: solid 8px #fff;
+    left: -2px;
+}
+
+#content .imageGalleryNext::before {
+    border-left: solid 8px #fff;
+    right: -2px;
+}
+
+.imageGalleryFrame {
+    overflow: hidden;
+    position: relative;
+}
+
+.imageGalleryContent {
+    white-space: nowrap;
+    position: absolute;
+}
+
+.imageGalleryImage {
+    display: inline-block;
+}
+
+#spliceSettings {
+    table-layout: fixed;
+}
+
+#spliceSettings th {
+    width: 220px;
+}
+
+.visualizer-buttons-bottom-right {
+    position: absolute;
+    bottom: 10px;
+    right: 20px;
+    white-space: nowrap;
+}
+
+.visualizer-buttons-bottom-right h3,
+.visualizer-buttons-bottom-right p {
+    white-space: normal;
+}
+
+#content .visualizer-button {
+    display: inline-block;
+    width: 40px;
+    height: 40px;
+    background-color: #aaa;
+    background-size: 20px;
+    background-position: center center;
+    background-repeat: no-repeat;
+    opacity: 0.5;
+    border: none;
+    border-radius: 5px;
+    outline: none !important;
+    margin-left: 8px;
+    padding: 0;
+}
+
+#content .visualizer-button:active {
+    background-color: #aaa;
+    opacity: 0.8;
+}
+
+#towerMoveInstructions {
+    position: fixed;
+    bottom: 10px;
+    left: 10px;
+    z-index: 99999;
+    border: 1px #4db9e7 solid;
+    background-color: rgba(255, 255, 255, 0.5);
+    padding: 10px 10px 20px;
+    width: 300px;
+}
+
+#towerMoveInstructions h3 {
+    margin-top: 0;
+    margin-bottom: 5px;
+}
+
+#towerMoveInstructions p {
+    margin: 0;
+    padding: 3px;
+}
+
+#towerMoveInstructions th {
+    text-align: center;
+}
+
+#towerMoveInstructions table {
+    margin-left: auto;
+    margin-right: auto;
+}
+
+#towerMoveInstructions .visualizer-button {
+    width: 30px;
+    height: 30px;
+    margin: 0;
+    background-size: 50%;
+}
+
+#towerMoveInstructions .visualizer-button-reset {
+    background-image: url("./visualizer/reset.svg");
+    background-size: 75%;
+}
+
+#zPlaneHeightPreview {
+    position: absolute;
+    top: 80px;
+    right: 10px;
+    z-index: 100;
+    border: 1px #4db9e7 solid;
+    background-color: rgba(255, 255, 255, 0.5);
+    padding: 10px;
+    pointer-events: none;
+}
+
+#sideDumpTooltip {
+    position: fixed;
+    top: 100px;
+    left: 100px;
+    z-index: 100;
+    font-size: 0.75rem;
+    background-color: #fffcef;
+    border: solid 1px #4db9e7;
+    pointer-events: none;
+    padding: 4px 6px;
+    text-align: left;
+    color: #000;
+}
+
+#sideDumpTooltip::after {
+    content: "Side transition";
+}

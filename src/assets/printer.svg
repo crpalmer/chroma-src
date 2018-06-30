@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Generator: Adobe Illustrator 15.0.2, SVG Export Plug-In . SVG Version: 6.00 Build 0)  -->
+<!DOCTYPE svg PUBLIC "-//W3C//DTD SVG 1.0//EN" "http://www.w3.org/TR/2001/REC-SVG-20010904/DTD/svg10.dtd">
+<svg version="1.0" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" x="0px" y="0px" width="260px"
+	 height="236.667px" viewBox="0 0 260 236.667" enable-background="new 0 0 260 236.667" xml:space="preserve">
+<g id="Filament">
+	<path id="Purple_1_" fill="none" stroke="#231F20" stroke-width="7" stroke-miterlimit="10" d="M219.756,94.571
+		c-15.443-63.513-22.59-81.37-48.461-86.48c-21.687-4.284-37.581,13.686-37.667,68.021"/>
+	<path id="Purple_2_" fill="none" stroke="#FFFFFF" stroke-width="5" stroke-miterlimit="10" d="M219.756,94.571
+		c-15.443-63.513-22.59-81.37-48.461-86.48c-21.687-4.284-37.581,13.686-37.667,68.021"/>
+	<path id="Purple" fill="none" stroke="#A7A9AC" stroke-width="2" stroke-miterlimit="10" d="M219.756,94.571
+		c-15.443-63.513-22.59-81.37-48.461-86.48c-21.687-4.284-37.581,13.686-37.667,68.021"/>
+</g>
+<g id="Printer">
+	<rect x="12.095" y="225.498" fill="none" stroke="#000000" stroke-miterlimit="10" width="20.085" height="5.685"/>
+	<rect x="230.76" y="225.498" fill="none" stroke="#000000" stroke-miterlimit="10" width="19.327" height="5.685"/>
+	<rect x="5.273" y="48.52" fill="#FFFFFF" stroke="#000000" stroke-miterlimit="10" width="250.12" height="178.873"/>
+	<rect x="21.569" y="67.468" fill="none" stroke="#000000" stroke-miterlimit="10" width="218.665" height="102.701"/>
+	<rect x="94.331" y="182.296" fill="none" width="72.005" height="35.244"/>
+	<rect x="94.331" y="182.296" fill="none" stroke="#000000" stroke-miterlimit="10" width="72.005" height="35.244"/>
+	<rect x="21.569" y="76.112" fill="none" stroke="#000000" stroke-miterlimit="10" width="218.665" height="11.935"/>
+</g>
+<g id="ProgressBar_Background">
+	<rect x="99.728" y="194.814" fill="#FFFFFF" stroke="#231F20" stroke-miterlimit="10" width="61.371" height="10.421"/>
+</g>
+<g id="PrintBed">
+	<rect x="33.261" y="155.143" fill="none" stroke="#231F20" stroke-miterlimit="10" width="17.721" height="15.024"/>
+	<rect x="213.346" y="155.143" fill="none" stroke="#231F20" stroke-miterlimit="10" width="20.578" height="15.024"/>
+	<rect x="21.569" y="147.982" fill="none" stroke="#231F20" stroke-miterlimit="10" width="218.665" height="7.159"/>
+</g>
+<g id="PrintHead">
+	<polygon fill="none" stroke="#231F20" stroke-miterlimit="10" points="134.49,105.899 126.079,98.877 134.49,91.855 
+		142.902,98.877 	"/>
+	<rect x="114.898" y="67.468" fill="#FFFFFF" stroke="#231F20" stroke-miterlimit="10" width="37.733" height="32.513"/>
+</g>
+</svg>

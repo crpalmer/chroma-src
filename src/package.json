@@ -1,0 +1,33 @@
+{
+  "name": "chroma",
+  "productName": "Chroma",
+  "version": "3.0.3",
+  "author": {
+    "name": "Mosaic Manufacturing Ltd.",
+    "email": "info@mosaicmanufacturing.com",
+    "url": "http://mosaicmanufacturing.com"
+  },
+  "description": "Multi-tool GCode processor for SEEM technology",
+  "companyName": "Mosaic Manufacturing Ltd.",
+  "homepage": "https://gitlab.com/mosaic-mfg/palette-standalone#readme",
+  "main": "main.js",
+  "dependencies": {
+    "avrgirl-arduino": "~2.0.0",
+    "bodymovin": "^4.9.0",
+    "commander": "~2.11.0",
+    "electron-updater": "2.18.2",
+    "ieee754": "~1.1.8",
+    "jimp": "^0.2.28",
+    "js-yaml": "~3.6.1",
+    "marked": "~0.3.6",
+    "mithril": "~0.2.5",
+    "raft-js": "git+ssh://git@gitlab.com:mosaic-mfg/raft.git",
+    "serialport": "~6.0.4",
+    "temp": "~0.8.3",
+    "three": "~0.86.0",
+    "three-canvas-renderer": "~2.0.0",
+    "three-trackballcontrols": "0.0.5",
+    "uuid": "^3.1.0"
+  },
+  "license": "ISC"
+}
