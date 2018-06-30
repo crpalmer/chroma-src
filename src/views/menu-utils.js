@@ -14,7 +14,7 @@ const modalUtils = require("./modal-utils");
 const SetupView = require("./setup-view");
 
 let tooltips = {
-    infillDumpSavings: "By using infill for transitioning filaments, the amount of extra filament (and time) required for this print was reduced by $1, or $2!",
+    infillDumpSavings: "By using $1 for transitioning filaments, the amount of extra filament (and time) required for this print was reduced by $2, or $3!",
     whatArePings: "Pings are checkpoints throughout a print. Your printer will pause twice during a ping (don't be alarmed when this happens). Pings update Palette on a print’s progress, and help Palette ensure it’s continually making the right amount of filament.",
     gradientModeFirstPiece: "Include an initial segment of filament before the gradient begins.",
     gradientModeLastPiece: "Include a final segment of filament after the gradient ends."
@@ -1997,10 +1997,22 @@ function displayPrintSummary(print, msf, printFilePath, msfPath) {
     let colorsUsed = msf.getColorsUsedLabels();
     let filamentLengths = msf.getFilamentLengthsByDrive();
     let infillDumpSavings = null;
-    if (print._printerProfile.transitionSettings.useInfillForTransition) {
-        infillDumpSavings = print.getInfillDumpSavings(msf);
-        infillDumpSavings.percent = Math.floor(infillDumpSavings.percent * 100);
-        infillDumpSavings.total = (infillDumpSavings.total / 1000).toFixed(2) + " m";
+    let savingsType = "infill";
+    if (print._printerProfile.canInfillDump()) {
+        let savings = print.getInfillDumpSavings(msf);
+        if (savings.total > 0) {
+            infillDumpSavings = {
+                percent: Math.floor(savings.percent * 100),
+                total: (savings.total / 1000).toFixed(2) + " m"
+            };
+        }
+        if (print._printerProfile.transitionSettings.useSupportForTransition) {
+            if (print._printerProfile.transitionSettings.useInfillForTransition) {
+                savingsType += " and support material";
+            } else {
+                savingsType = "support material";
+            }
+        }
     }
 
     let modalWindow = document.getElementById("open-modal");
@@ -2072,7 +2084,7 @@ function displayPrintSummary(print, msf, printFilePath, msfPath) {
                                     "padding-bottom": "5px"
                                 }
                             }, m("label.tooltip", {
-                                "data-tooltip": tooltips.infillDumpSavings.replace("$1", infillDumpSavings.total).replace("$2", infillDumpSavings.percent + "%")
+                                "data-tooltip": tooltips.infillDumpSavings.replace("$1", savingsType).replace("$2", infillDumpSavings.total).replace("$3", infillDumpSavings.percent + "%")
                             }, "Filament/Time Saved")),
                             m("td", infillDumpSavings.total + (infillDumpSavings.percent > 0 ? " (" + infillDumpSavings.percent + "% waste reduction)" : ""))
                         ]) : []),

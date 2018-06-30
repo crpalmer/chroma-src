@@ -1036,7 +1036,7 @@ let presets = [
                 gpxProfile: false
             },
             {
-                name: "M3 (Single Extruder)",
+                name: "M3 (Single)",
                 uid: "makergear_m3",
                 inputParsers: ["gcode"],
                 engine: "marlin",
@@ -1051,6 +1051,48 @@ let presets = [
                 },
                 filamentDiameter: 1.75,
                 nozzleDiameter: 0.35,
+                bowdenTube: false,
+                gpxProfile: false
+            }
+        ]
+    }, {
+        name: "Maker's Tool Works",
+        prefixNameToModels: false,
+        models: [
+            {
+                name: "MTW Create (Single)",
+                uid: "mtw_create",
+                inputParsers: ["gcode"],
+                engine: "marlin",
+                postprocessing: false,
+                volumetric: false,
+                extruderCount: 1,
+                printBed: {
+                    circular: false,
+                    x: 250,
+                    y: 315,
+                    origin: "middle"
+                },
+                filamentDiameter: 1.75,
+                nozzleDiameter: 0.4,
+                bowdenTube: false,
+                gpxProfile: false
+            }, {
+                name: "MTW Create (Dual)",
+                uid: "mtw_created",
+                inputParsers: ["gcode"],
+                engine: "marlin",
+                postprocessing: false,
+                volumetric: false,
+                extruderCount: 2,
+                printBed: {
+                    circular: false,
+                    x: 250,
+                    y: 315,
+                    origin: "middle"
+                },
+                filamentDiameter: 1.75,
+                nozzleDiameter: 0.4,
                 bowdenTube: false,
                 gpxProfile: false
             }

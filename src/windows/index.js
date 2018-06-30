@@ -52,8 +52,8 @@
                     if (versions.palette.length === 0 && versions.palettePlus.length === 0) {
                         return;
                     }
-                    if ((global.latestPaletteFWVersion && global.latestPaletteFWVersion === versions.palette[0].version)
-                        && (global.latestPalettePlusFWVersion && global.latestPalettePlusFWVersion === versions.palettePlus[0].version)) {
+                    if ((versions.palette.length === 0 || (global.latestPaletteFWVersion && global.latestPaletteFWVersion === versions.palette[0].version))
+                        && (versions.palettePlus.length === 0 || (global.latestPalettePlusFWVersion && global.latestPalettePlusFWVersion === versions.palettePlus[0].version))) {
                         return;
                     }
                     if (global.firstRun || profiles.getProfileCount() === 0) {

@@ -314,7 +314,7 @@ function getThisTransitionExtrusionForTower(tower, printer, z, toolChangeCounter
     if (totalLayerToolChanges > 0) {
         layerSegments = totalLayerToolChanges;
         extraPieceLength = tower.layerStats[z].transitions[toolChangeCounter].extraPieceLength;
-        if (global.advancedMode && printer.transitionSettings.useInfillForTransition) {
+        if (printer.canInfillDump()) {
             infillDumpLength = tower.layerStats[z].transitions[toolChangeCounter].infillDumpAmount.usableTotal;
         }
     }
@@ -1140,8 +1140,12 @@ class Print {
                         offset: 0,
                         usableOffset: 0
                     };
-                    if (printFeatureDetection && solidLayerFeatureComments) {
-                        infillDumpAmount = checkInfillDump(raft);
+                    if (printFeatureDetection && solidLayerFeatureComments && printer.canInfillDump()) {
+                        infillDumpAmount = checkInfillDump(
+                            raft,
+                            printer.transitionSettings.useInfillForTransition,
+                            printer.transitionSettings.useSupportForTransition
+                        );
                     }
                     let transition = {
                         from: previousTool,
@@ -1263,7 +1267,6 @@ class Print {
 
     async _mergeTransitionTowers(msf, progressBar = null) {
 
-        const print = this;
         const raft = this._outRaft;
         const printer = this._printerProfile;
         const tower = this._tower;
@@ -1476,7 +1479,7 @@ class Print {
         function pingStartConditionMet(totalExtrusion) {
             return (totalExtrusion >= nextPingStart
             && (transitionExtrusionSoFar + (PING_EXTRUSION_LENGTH * 1.1) <= thisTransitionExtrusion)
-            && (thisTransitionExtrusion < (PING_EXTRUSION_LENGTH * 2) || transitionExtrusionSoFar >= PING_EXTRUSION_LENGTH));
+            && (thisTransitionExtrusion < (PING_EXTRUSION_LENGTH * 2.2) || transitionExtrusionSoFar >= PING_EXTRUSION_LENGTH));
         }
 
         function checkPingSequenceStart() {
@@ -1631,7 +1634,7 @@ class Print {
             // account for (1) rounding errors in extrusion tracking, and (2) length changes from ping correction
             if ((totalExtrusion * 0.97) + effectiveLoadingOffset < (totalPrintLength * 1.03)) {
                 if (global.env.oem) {
-                    if (pingStartConditionMet(totalExtrusion)) {
+                    if (totalExtrusion >= nextPingStart) {
                         raft.insertInstruction(new Raft.DwellInstruction({
                             duration: 0
                         }));
@@ -1921,6 +1924,8 @@ class Print {
             layerToolChangeCounter = 0;
             towerLayerInstructionCounter = 0;
             lastTowerExtrusionPosition = 0;
+            thisTransitionExtrusion = 0;
+            transitionExtrusionSoFar = 0;
 
             if (layerHeight === null || tower.towerLayerHeights.indexOf(layerHeight) < 0) {
                 // a non-tower layer
@@ -1929,16 +1934,17 @@ class Print {
                 currentTowerLayer = null;
                 totalLayerToolChanges = 0;
                 totalTowerLayerInstructions = 0;
-                thisTransitionExtrusion = 0;
             } else {
                 // a tower layer -- get info for use while on the layer
                 currentTowerLayer = {
                     commands: tower.precode[layerHeight].commands,
                     layerHeight: layerHeight
                 };
-                transitionExtrusionSoFar = 0;
                 totalLayerToolChanges = tower.layerStats[layerHeight].transitions.length;
                 totalTowerLayerInstructions = currentTowerLayer.commands.length;
+                if (totalLayerToolChanges === 0) {
+                    thisTransitionExtrusion = tower.precode[layerHeight].totalExtrusion;
+                }
             }
 
         }
@@ -2080,7 +2086,7 @@ class Print {
                     if (totalLayerToolChanges > 0 && layerToolChangeCounter < totalLayerToolChanges) {
                         extraTransitionLength = tower.layerStats[currentTowerLayer.layerHeight].transitions[layerToolChangeCounter].extraPieceLength;
                         thisTransitionExtrusion = getThisTransitionExtrusionForTower(tower, printer, currentTowerLayer.layerHeight, layerToolChangeCounter);
-                        if (global.advancedMode && printer.transitionSettings.useInfillForTransition) {
+                        if (printer.canInfillDump()) {
                             infillDumpLength = tower.layerStats[currentTowerLayer.layerHeight].transitions[layerToolChangeCounter].infillDumpAmount;
                         }
                     }
@@ -2297,7 +2303,7 @@ class Print {
                 if (Math.abs(purgeCoordinates.y - yBedMax) === Math.abs(purgeCoordinates.y - yBedMin)) {
                     // halfway between north and south edges
                     purgeInPlaceJogDirection = "north";
-                } else if (Math.abs(purgeCoordinates.y - yBedMax) > Math.abs(purgeCoordinates.y - yBedMin)) {
+                } else if (Math.abs(purgeCoordinates.y - yBedMax) < Math.abs(purgeCoordinates.y - yBedMin)) {
                     // closer to north edge than south edge
                     purgeInPlaceJogDirection = "south";
                 } else {
@@ -2309,7 +2315,7 @@ class Print {
                 if (Math.abs(purgeCoordinates.y - yBedMax) === Math.abs(purgeCoordinates.y - yBedMin)) {
                     // halfway between north and south edges
                     purgeInPlaceJogDirection = "north";
-                } else if (Math.abs(purgeCoordinates.y - yBedMax) > Math.abs(purgeCoordinates.y - yBedMin)) {
+                } else if (Math.abs(purgeCoordinates.y - yBedMax) < Math.abs(purgeCoordinates.y - yBedMin)) {
                     // closer to north edge than south edge
                     purgeInPlaceJogDirection = "south";
                 } else {
@@ -2949,9 +2955,12 @@ class Print {
                         offset: 0,
                         usableOffset: 0
                     };
-                    if (global.advancedMode && printer.transitionSettings.useInfillForTransition
-                        && printFeatureDetection && solidLayerFeatureComments) {
-                        infillDumpLength = checkInfillDump(raft);
+                    if (printer.canInfillDump() && printFeatureDetection && solidLayerFeatureComments) {
+                        infillDumpLength = checkInfillDump(
+                            raft,
+                            printer.transitionSettings.useInfillForTransition,
+                            printer.transitionSettings.useSupportForTransition
+                        );
                         if (infillDumpLength.total > thisTransitionLength) {
                             infillDumpLength.total = thisTransitionLength;
                         }
@@ -3129,7 +3138,7 @@ class Print {
     }
 
     getInfillDumpSavings(msf) {
-        if (!global.print._printerProfile.transitionSettings.useInfillForTransition) {
+        if (!global.print._printerProfile.canInfillDump()) {
             return null;
         }
         let totalFilament = 0;

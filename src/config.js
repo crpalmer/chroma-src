@@ -139,7 +139,10 @@ function readConfigFile() {
         global.latestPaletteFWVersion = configContents.latestPaletteFWVersion;
     }
     if (configContents.latestPalettePlusFWVersion !== undefined) {
-        global.latestPaletteFWVersion = configContents.latestPaletteFWVersion;
+        global.latestPalettePlusFWVersion = configContents.latestPalettePlusFWVersion;
+    }
+    if (global.latestPalettePlusFWVersion === false) {
+        global.latestPalettePlusFWVersion = global.latestPaletteFWVersion;
     }
     if (configContents.reduceMemoryUsage !== undefined) {
         global.reduceMemoryUsage = configContents.reduceMemoryUsage;

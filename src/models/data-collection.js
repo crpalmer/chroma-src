@@ -84,6 +84,8 @@ function logGeneric(type, data = {}) {
         type: type,
         uuid: global.uuid,
         timestamp: new Date(),
+        platform: process.platform,
+        arch: process.arch,
         data: data
     });
     writeFile();

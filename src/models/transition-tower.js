@@ -365,7 +365,7 @@ class TransitionTower {
                     totalExtrusionAtCurrentTransition = transition.totalPrintExtrusion;
                     let extrusionDelta = (totalExtrusionAtCurrentTransition - totalExtrusionAtLastTransition) + ((1 - targetPosition) * lastLayerPurgeLength) + (targetPosition * layerPurgeLength);
                     let infillDumpLength = 0;
-                    if (global.advancedMode && printerProfile.transitionSettings.useInfillForTransition
+                    if (printerProfile.canInfillDump()
                         && print.printFeatureDetection && print.solidLayerFeatureComments
                         && transition.infillDumpAmount && transition.infillDumpAmount.total > 0) {
                         if (transition.infillDumpAmount.offset > 0) {
@@ -1406,144 +1406,75 @@ class TransitionTower {
                 let xBoundReached = false;
                 let yBoundReached = false;
 
-                if (reverseInfillDirection) {
+                // assume infill is drawn southwest/northeast
+                // (X coordinates will be mirrored if reverseInfillDirection is true)
 
-                    // draw infill southwest/northeast
+                let printSouthwest = true;
 
-                    let printSouthwest = true;
+                let northeastX = xRightBound;
+                let northeastY = yBottomBound;
+                let southwestX = xRightBound;
+                let southwestY = yBottomBound;
 
-                    let northeastX = xRightBound;
-                    let northeastY = yBottomBound;
-                    let southwestX = xRightBound;
-                    let southwestY = yBottomBound;
+                while (needsMoreLines) {
 
-                    while (needsMoreLines) {
-
-                        if (xBoundReached) {
-                            // move the southwest corner north
-                            southwestY += infillIncrement;
-                        } else {
-                            // move the southwest corner west
-                            southwestX -= infillIncrement;
-                        }
-                        if (yBoundReached) {
-                            // move the northeast corner west
-                            northeastX -= infillIncrement;
-                        } else {
-                            // move the northeast corner north
-                            northeastY += infillIncrement;
-                        }
-
-                        // check if we passed the x bound (ie. we reached the southwest corner)
-                        if (!xBoundReached && southwestX < xLeftBound) {
-                            southwestY = yBottomBound + (xLeftBound - southwestX);
-                            southwestX = xLeftBound;
-                            xBoundReached = true;
-                        }
-
-                        // check if we passed the y bound (ie. we reached the northeast corner)
-                        if (!yBoundReached && northeastY > yTopBound) {
-                            northeastX = xRightBound - (northeastY - yTopBound);
-                            northeastY = yTopBound;
-                            yBoundReached = true;
-                        }
-
-                        if (printSouthwest) {
-                            x1 = northeastX;
-                            y1 = northeastY;
-                            x2 = southwestX;
-                            y2 = southwestY;
-                        } else {
-                            x1 = southwestX;
-                            y1 = southwestY;
-                            x2 = northeastX;
-                            y2 = northeastY;
-                        }
-                        precodeLayer.commands.push({x1: x1, y1: y1, x2: x1, y2: y1, feedrate: infillSpeed});  // move from last line end to this line start
-                        lineLength = getLineLength(x1, y1, x2, y2);
-                        extrusionAmount = getExtrusionAmount(extrusionFactor, lineLength);
-                        precodeLayer.commands.push({x1: x1, y1: y1, x2: x2, y2: y2, extrusion: extrusionAmount, feedrate: infillSpeed});
-                        precodeLayer.totalExtrusion += extrusionAmount;
-
-                        // check whether we should continue generating infill
-                        if (Math.abs(northeastX - xLeftBound) < infillIncrement) {
-                            needsMoreLines = false;
-                        } else if (Math.abs(yTopBound - southwestY) < infillIncrement) {
-                            needsMoreLines = false;
-                        } else {
-                            printSouthwest = !printSouthwest;
-                        }
-
+                    if (xBoundReached) {
+                        // move the southwest corner north
+                        southwestY += infillIncrement;
+                    } else {
+                        // move the southwest corner west
+                        southwestX -= infillIncrement;
+                    }
+                    if (yBoundReached) {
+                        // move the northeast corner west
+                        northeastX -= infillIncrement;
+                    } else {
+                        // move the northeast corner north
+                        northeastY += infillIncrement;
                     }
 
-                } else {
+                    // check if we passed the x bound (ie. we reached the southwest corner)
+                    if (!xBoundReached && southwestX < xLeftBound) {
+                        southwestY = yBottomBound + (xLeftBound - southwestX);
+                        southwestX = xLeftBound;
+                        xBoundReached = true;
+                    }
 
-                    // draw infill northwest/southeast
+                    // check if we passed the y bound (ie. we reached the northeast corner)
+                    if (!yBoundReached && northeastY > yTopBound) {
+                        northeastX = xRightBound - (northeastY - yTopBound);
+                        northeastY = yTopBound;
+                        yBoundReached = true;
+                    }
 
-                    let printSoutheast = true;
+                    if (printSouthwest) {
+                        x1 = northeastX;
+                        y1 = northeastY;
+                        x2 = southwestX;
+                        y2 = southwestY;
+                    } else {
+                        x1 = southwestX;
+                        y1 = southwestY;
+                        x2 = northeastX;
+                        y2 = northeastY;
+                    }
+                    if (reverseInfillDirection) {
+                        x1 = xRightBound + xLeftBound - x1;
+                        x2 = xRightBound + xLeftBound - x2;
+                    }
+                    precodeLayer.commands.push({x1: x1, y1: y1, x2: x1, y2: y1, feedrate: infillSpeed});  // move from last line end to this line start
+                    lineLength = getLineLength(x1, y1, x2, y2);
+                    extrusionAmount = getExtrusionAmount(extrusionFactor, lineLength);
+                    precodeLayer.commands.push({x1: x1, y1: y1, x2: x2, y2: y2, extrusion: extrusionAmount, feedrate: infillSpeed});
+                    precodeLayer.totalExtrusion += extrusionAmount;
 
-                    let northwestX = xLeftBound;
-                    let northwestY = yBottomBound;
-                    let southeastX = xLeftBound;
-                    let southeastY = yBottomBound;
-
-                    while (needsMoreLines) {
-
-                        if (xBoundReached) {
-                            // move the southeast corner north
-                            southeastY += infillIncrement;
-                        } else {
-                            // move the southeast corner east
-                            southeastX += infillIncrement;
-                        }
-                        if (yBoundReached) {
-                            // move the northwest corner east
-                            northwestX += infillIncrement;
-                        } else {
-                            // move the northwest corner north
-                            northwestY += infillIncrement;
-                        }
-
-                        // check if we passed the x bound (ie. we reached the southeast corner)
-                        if (!xBoundReached && southeastX > xRightBound) {
-                            southeastY = yBottomBound + (southeastX - xRightBound);
-                            southeastX = xRightBound;
-                            xBoundReached = true;
-                        }
-
-                        // check if we passed the y bound (ie. we reached the northwest corner)
-                        if (!yBoundReached && northwestY > yTopBound) {
-                            northwestX = xLeftBound + (northwestY - yTopBound);
-                            northwestY = yTopBound;
-                            yBoundReached = true;
-                        }
-
-                        if (printSoutheast) {
-                            x1 = northwestX;
-                            y1 = northwestY;
-                            x2 = southeastX;
-                            y2 = southeastY;
-                        } else {
-                            x1 = southeastX;
-                            y1 = southeastY;
-                            x2 = northwestX;
-                            y2 = northwestY;
-                        }
-                        precodeLayer.commands.push({x1: x1, y1: y1, x2: x1, y2: y1, feedrate: infillSpeed});  // move from last line end to this line start
-                        lineLength = getLineLength(x1, y1, x2, y2);
-                        extrusionAmount = getExtrusionAmount(extrusionFactor, lineLength);
-                        precodeLayer.commands.push({x1: x1, y1: y1, x2: x2, y2: y2, extrusion: extrusionAmount, feedrate: infillSpeed});
-                        precodeLayer.totalExtrusion += extrusionAmount;
-
-                        // check whether we should continue generating infill
-                        if (Math.abs(xRightBound - northwestX) < infillIncrement) {
-                            needsMoreLines = false;
-                        } else if (Math.abs(yTopBound - southeastY) < infillIncrement) {
-                            needsMoreLines = false;
-                        } else {
-                            printSoutheast = !printSoutheast;
-                        }
-
+                    // check whether we should continue generating infill
+                    if (Math.abs(northeastX - xLeftBound) < infillIncrement) {
+                        needsMoreLines = false;
+                    } else if (Math.abs(yTopBound - southwestY) < infillIncrement) {
+                        needsMoreLines = false;
+                    } else {
+                        printSouthwest = !printSouthwest;
                     }
 
                 }

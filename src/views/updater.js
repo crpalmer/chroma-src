@@ -22,8 +22,6 @@ let updateDialogOpen = false;
 function checkForFirmwareUpdates(callback) {
     utils.checkInternetConnection(function (isConnected) {
         if (isConnected) {
-            let paletteChecked = false;
-            let palettePlusChecked = false;
             let versions = {
                 palette: [],
                 palettePlus: []
@@ -40,36 +38,28 @@ function checkForFirmwareUpdates(callback) {
                 });
                 response.on("end", function () {
                     if (response.statusCode === 200) {
-                        paletteChecked = true;
                         versions.palette = JSON.parse(contents).versions;
-                        if (paletteChecked && palettePlusChecked) {
-                            callback(false, versions);
-                        }
-                    } else {
-                        callback({
-                            message: "Could not check for updates",
-                            detail: "An error occurred trying to communicate with the update server."
-                        });
-                    }
-                })
-            }).end();
-
-            // check for Palette+ firmware updates
-            http.request({
-                host: "emerald.mosaicmanufacturing.com",
-                path: "/palette-plus/latest/" + (global.latestPalettePlusFWVersion ? global.latestPalettePlusFWVersion : "1.0.0")
-            }, function (response) {
-                let contents = "";
-                response.on("data", function (chunk) {
-                    contents += chunk;
-                });
-                response.on("end", function () {
-                    if (response.statusCode === 200) {
-                        palettePlusChecked = true;
-                        versions.palettePlus = JSON.parse(contents).versions;
-                        if (paletteChecked && palettePlusChecked) {
-                            callback(false, versions);
-                        }
+                        // check for Palette+ firmware updates
+                        http.request({
+                            host: "emerald.mosaicmanufacturing.com",
+                            path: "/palette-plus/latest/" + (global.latestPalettePlusFWVersion ? global.latestPalettePlusFWVersion : "1.0.0")
+                        }, function (response) {
+                            let contents = "";
+                            response.on("data", function (chunk) {
+                                contents += chunk;
+                            });
+                            response.on("end", function () {
+                                if (response.statusCode === 200) {
+                                    versions.palettePlus = JSON.parse(contents).versions;
+                                    callback(false, versions);
+                                } else {
+                                    callback({
+                                        message: "Could not check for updates",
+                                        detail: "An error occurred trying to communicate with the update server."
+                                    });
+                                }
+                            })
+                        }).end();
                     } else {
                         callback({
                             message: "Could not check for updates",
@@ -221,6 +211,9 @@ function showUpdateDialog(versions) {
             m("div.buttonList", [
                 m("div.left", [
                     m("button", {
+                        style: {
+                            "margin-bottom": "2px"
+                        },
                         onclick: function () {
                             // skip this version
                             global.ignoreUpdateVersion = versions[0].version;
@@ -231,6 +224,9 @@ function showUpdateDialog(versions) {
                 ]),
                 m("div.right", [
                     m("button", {
+                        style: {
+                            "margin-bottom": "2px"
+                        },
                         onclick: function () {
                             // remind me later
                             global.ignoreUpdateVersion = false;
@@ -239,6 +235,9 @@ function showUpdateDialog(versions) {
                         }
                     }, "Remind me later"),
                     m("button.confirm", {
+                        style: {
+                            "margin-bottom": "2px"
+                        },
                         onclick: function () {
                             // download
                             global.ignoreUpdateVersion = false;
@@ -345,6 +344,9 @@ function showFirmwareUpdateDialog(versions) {
             m("div.buttonList", [
                 m("div.left", [
                     m("button", {
+                        style: {
+                            "margin-bottom": "2px"
+                        },
                         onclick: function () {
                             // remind me later
                             closeUpdateDialog();
@@ -353,6 +355,9 @@ function showFirmwareUpdateDialog(versions) {
                 ]),
                 m("div.right", [
                     m("button.confirm", {
+                        style: {
+                            "margin-bottom": "2px"
+                        },
                         onclick: function () {
                             // update
                             if (versions.palette.length > 0) {

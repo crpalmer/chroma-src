@@ -4014,6 +4014,9 @@ function printerProfileModal(p, tP, onClose, startingTab = 0) {
                                                         checked: tempProfile.transitionSettings.type === SIDE_TRANSITIONS,
                                                         onclick: function () {
                                                             tempProfile.transitionSettings.type = SIDE_TRANSITIONS;
+                                                            if (tempProfile.printBedDimensions.circular) {
+                                                                tempProfile.transitionSettings.sideTransitions.purgeInPlace = true;
+                                                            }
                                                             document.getElementById("transitionTowerSettings").classList.add("formSectionDisabled");
                                                             document.getElementById("towerPrintSpeedAuto").disabled = true;
                                                             document.getElementById("towerPrintSpeedManual").disabled = true;
@@ -4117,12 +4120,30 @@ function printerProfileModal(p, tP, onClose, startingTab = 0) {
                                                 m("div.checkboxGroup", [
                                                     m("input#useInfillDump[type=checkbox]", {
                                                         checked: tempProfile.transitionSettings.useInfillForTransition,
-                                                        disabled: tempProfile.transitionSettings.type === NO_TRANSITIONS,
+                                                        disabled: (tempProfile.transitionSettings.type === NO_TRANSITIONS || global.print),
                                                         onclick: function (event) {
                                                             tempProfile.transitionSettings.useInfillForTransition = event.target.checked;
                                                         }
                                                     }),
-                                                    m("label[for='useInfillDump']", "Attempt to use infill for transitioning filaments")
+                                                    m("label[for='useInfillDump']", {
+                                                        style: {
+                                                            opacity: ((global.print && tempProfile.transitionSettings.type !== NO_TRANSITIONS) ? "0.3" : null)
+                                                        }
+                                                    }, "Attempt to use infill for transitioning filaments")
+                                                ]),
+                                                m("div.checkboxGroup", [
+                                                    m("input#useSupportDump[type=checkbox]", {
+                                                        checked: tempProfile.transitionSettings.useSupportForTransition,
+                                                        disabled: (tempProfile.transitionSettings.type === NO_TRANSITIONS || global.print),
+                                                        onclick: function (event) {
+                                                            tempProfile.transitionSettings.useSupportForTransition = event.target.checked;
+                                                        }
+                                                    }),
+                                                    m("label[for='useSupportDump']", {
+                                                        style: {
+                                                            opacity: ((global.print && tempProfile.transitionSettings.type !== NO_TRANSITIONS) ? "0.3" : null)
+                                                        }
+                                                    }, "Attempt to use supports for transitioning filaments")
                                                 ])
                                             ])
                                         ]) : []),
@@ -5705,7 +5726,7 @@ function openCalibrationWizard(tempProfile, editReference, closeAfter) {
                                                     outRaft.save(calibrationPrintFilePath);
                                                 } else if (tempProfile.postprocessing === "x3g") {
                                                     calibrationPrintFilePath = calibrationCSFFilePath + ".x3g";
-                                                    Postprocessor.runGPX(tempProfile.gpxProfile, tempProfile.gpxConfigPath, inputBasePath + inputExt, calibrationPrintFilePath);
+                                                    require("./gpx").runGPX(tempProfile.gpxProfile, tempProfile.gpxConfigPath, inputBasePath + inputExt, calibrationPrintFilePath);
                                                 } else {
                                                     fs.createReadStream(inputBasePath + inputExt).pipe(fs.createWriteStream(calibrationPrintFilePath));
                                                 }
@@ -6444,7 +6465,7 @@ function openCalibrationWizard(tempProfile, editReference, closeAfter) {
 
 function loadCalibrationFile(callback) {
 
-    let gpxConfigMissing = Postprocessor.checkGPXConfigMissing(tempProfile);
+    let gpxConfigMissing = require("./gpx").checkGPXConfigMissing(tempProfile);
     if (gpxConfigMissing) {
         return;
     }
@@ -6684,7 +6705,8 @@ async function editProfile(profile, modifications) {
         redrawPrint = true;
     }
     if (modifications.transitionSettings.type === TRANSITION_TOWER
-        && modifications.transitionSettings.useInfillForTransition !== profile.transitionSettings.useInfillForTransition) {
+        && (modifications.transitionSettings.useInfillForTransition !== profile.transitionSettings.useInfillForTransition
+            || modifications.transitionSettings.useSupportForTransition !== profile.transitionSettings.useSupportForTransition)) {
         updateCurrentPrint = true;
     }
     if (modifications.transitionSettings.type === TRANSITION_TOWER

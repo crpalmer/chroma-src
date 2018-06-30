@@ -47,6 +47,7 @@ class Printer {
             initialPurgeLength: 130,
             targetPosition: 0.4,
             useInfillForTransition: false,
+            useSupportForTransition: false,
             towers: {
                 printSpeed: "auto",
                 extrusionWidth: "auto",
@@ -108,25 +109,14 @@ class Printer {
         if (min >= max) {
             return max;
         }
-        let t = 1;
-        if (fromStrength === toStrength) {
-            t = 0.5;
-        } else if (fromStrength > toStrength) {
-            if (toStrength === 0 && fromStrength === 2) {
-                t = 1;
-            } else {
-                t = 0.75;
-            }
-        } else {
-            // fromStrength < toStrength
-            if (toStrength === 2 && fromStrength === 0) {
-                t = 0;
-            } else {
-                t = 0.25;
-            }
-        }
+        let t = (fromStrength - toStrength + 2) / 4;
         return lerp(min, max, t);
 
+    }
+
+    canInfillDump() {
+        return (global.advancedMode && (this.transitionSettings.useInfillForTransition
+            || this.transitionSettings.useSupportForTransition));
     }
 
     clone() {
@@ -171,6 +161,7 @@ class Printer {
         this.transitionSettings.initialPurgeLength = other.transitionSettings.initialPurgeLength;
         this.transitionSettings.targetPosition = other.transitionSettings.targetPosition;
         this.transitionSettings.useInfillForTransition = other.transitionSettings.useInfillForTransition;
+        this.transitionSettings.useSupportForTransition = other.transitionSettings.useSupportForTransition;
         this.transitionSettings.towers.printSpeed = other.transitionSettings.towers.printSpeed;
         this.transitionSettings.towers.extrusionWidth = other.transitionSettings.towers.extrusionWidth;
         this.transitionSettings.towers.minDensity = other.transitionSettings.towers.minDensity;
@@ -238,6 +229,7 @@ class Printer {
             && this.transitionSettings.initialPurgeLength === other.transitionSettings.initialPurgeLength
             && this.transitionSettings.targetPosition === other.transitionSettings.targetPosition
             && this.transitionSettings.useInfillForTransition === other.transitionSettings.useInfillForTransition
+            && this.transitionSettings.useSupportForTransition === other.transitionSettings.useSupportForTransition
             && this.transitionSettings.towers.printSpeed === other.transitionSettings.towers.printSpeed
             && this.transitionSettings.towers.extrusionWidth === other.transitionSettings.towers.extrusionWidth
             && this.transitionSettings.towers.minDensity === other.transitionSettings.towers.minDensity
@@ -299,6 +291,7 @@ class Printer {
                 initialPurgeLength: this.transitionSettings.initialPurgeLength,
                 purgeTarget: this.transitionSettings.targetPosition,
                 transitionInInfill: this.transitionSettings.useInfillForTransition,
+                transitionInSupport: this.transitionSettings.useSupportForTransition,
                 towers: {
                     printSpeed: this.transitionSettings.towers.printSpeed,
                     extrusionWidth: this.transitionSettings.towers.extrusionWidth,
@@ -409,6 +402,7 @@ class Printer {
                 printer.transitionSettings.initialPurgeLength = (json.transitions.initialPurgeLength === undefined ? json.transitions.purgeLength : json.transitions.initialPurgeLength);
                 printer.transitionSettings.targetPosition = json.transitions.purgeTarget;
                 printer.transitionSettings.useInfillForTransition = !!json.transitions.transitionInInfill;
+                printer.transitionSettings.useSupportForTransition = !!json.transitions.transitionInSupport;
                 printer.transitionSettings.towers.printSpeed = (json.transitions.towers.printSpeed === undefined ? "auto" : json.transitions.towers.printSpeed);
                 printer.transitionSettings.towers.extrusionWidth = (json.transitions.towers.extrusionWidth === undefined ? "auto" : json.transitions.towers.extrusionWidth);
                 printer.transitionSettings.towers.minDensity = json.transitions.towers.minDensity;

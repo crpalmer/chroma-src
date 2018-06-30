@@ -82,9 +82,7 @@ function importProfile(filepath) {
     if (profile.version === 1) {
         return profile;
     }
-    if (!profile.uuid) {
-        profile.uuid = uuid();
-    }
+    profile.uuid = uuid();
     let activePrinter = getActiveProfile();
     addProfileToList(profile);
     config.saveProfile(profile);
@@ -96,6 +94,9 @@ function importProfile(filepath) {
 
 function exportProfile(profile, path) {
     let yml = (profile instanceof Printer) ? profile.serialize() : null;
+    if (yml && yml.uuid) {
+        delete yml.uuid;
+    }
     config.dumpYML(yml, path);
 }
 
