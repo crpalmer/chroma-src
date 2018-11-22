@@ -110,7 +110,8 @@ let presets = [
                 nozzleDiameter: 0.4,
                 bowdenTube: 1500,
                 gpxProfile: false
-            }, {
+            },
+            {
                 name: "Anycubic Delta Linear Plus",
                 uid: "anycubic_deltalinearplus",
                 inputParsers: ["gcode"],
@@ -127,7 +128,8 @@ let presets = [
                 nozzleDiameter: 0.4,
                 bowdenTube: 1500,
                 gpxProfile: false
-            }, {
+            },
+            {
                 name: "Anycubic i3 MEGA",
                 uid: "anycubic_i3mega",
                 inputParsers: ["gcode"],
@@ -147,7 +149,8 @@ let presets = [
                 gpxProfile: false
             }
         ]
-    }, {
+    },
+    {
         name: "Aleph Objects",
         prefixNameToModels: false,
         models: [
@@ -169,7 +172,8 @@ let presets = [
                 nozzleDiameter: 0.35,
                 bowdenTube: false,
                 gpxProfile: false
-            }, {
+            },
+            {
                 name: "LulzBot TAZ 5 (1.75 mm upgrade, 0.5 mm nozzle)",
                 uid: "lulzbot_taz5_05",
                 inputParsers: ["gcode"],
@@ -187,7 +191,8 @@ let presets = [
                 nozzleDiameter: 0.5,
                 bowdenTube: false,
                 gpxProfile: false
-            }, {
+            },
+            {
                 name: "LulzBot TAZ 6 (1.75 mm upgrade)",
                 uid: "lulzbot_taz6",
                 inputParsers: ["gcode"],
@@ -205,7 +210,8 @@ let presets = [
                 nozzleDiameter: 0.5,
                 bowdenTube: false,
                 gpxProfile: false
-            }, {
+            },
+            {
                 name: "LulzBot Mini (1.75 mm upgrade)",
                 uid: "lulzbot_mini",
                 inputParsers: ["gcode"],
@@ -225,7 +231,8 @@ let presets = [
                 gpxProfile: false
             }
         ]
-    }, {
+    },
+    {
         name: "Bibo",
         prefixNameToModels: false,
         models: [
@@ -249,7 +256,8 @@ let presets = [
                 gpxProfile: false
             }
         ]
-    }, {
+    },
+    {
         name: "Blue Eagle Labs",
         prefixNameToModels: true,
         models: [
@@ -273,7 +281,37 @@ let presets = [
                 gpxProfile: false
             }
         ]
-    }, {
+    },
+    {
+        name: "BoXZY",
+        prefixNameToModels: false,
+        models: [
+            {
+                name: "BoXZY",
+                uid: "boxzy_boxzy",
+                inputParsers: ["gcode"],
+                engine: "repetier",
+                postprocessing: false,
+                volumetric: false,
+                extruderCount: 1,
+                printBed: {
+                    circular: false,
+                    x: 165,
+                    y: 165,
+                    origin: "custom",
+                    originOffsets: {
+                        x: 0,
+                        y: 165
+                    }
+                },
+                filamentDiameter: 1.75,
+                nozzleDiameter: 0.4,
+                bowdenTube: 550,
+                gpxProfile: false
+            }
+        ]
+    },
+    {
         name: "BQ",
         prefixNameToModels: true,
         models: [
@@ -297,7 +335,8 @@ let presets = [
                 gpxProfile: false
             }
         ]
-    }, {
+    },
+    {
         name: "CraftUnique",
         prefixNameToModels: true,
         models: [
@@ -324,7 +363,8 @@ let presets = [
                 bowdenTube: false,
                 gpxProfile: false,
                 customSetupInfo: customSetupInfoCraftbot
-            }, {
+            },
+            {
                 name: "Craftbot 2",
                 uid: "craftbot2",
                 inputParsers: ["gcode"],
@@ -347,7 +387,8 @@ let presets = [
                 bowdenTube: false,
                 gpxProfile: false,
                 customSetupInfo: customSetupInfoCraftbot
-            }, {
+            },
+            {
                 name: "Craftbot PLUS",
                 uid: "craftbotplus",
                 inputParsers: ["gcode"],
@@ -370,7 +411,8 @@ let presets = [
                 bowdenTube: false,
                 gpxProfile: false,
                 customSetupInfo: customSetupInfoCraftbot
-            }, {
+            },
+            {
                 name: "Craftbot XL",
                 uid: "craftbotxl",
                 inputParsers: ["gcode"],
@@ -395,10 +437,30 @@ let presets = [
                 customSetupInfo: customSetupInfoCraftbot
             }
         ]
-    }, {
+    },
+    {
         name: "Creality",
         prefixNameToModels: true,
         models: [
+            {
+                name: "Ender 3",
+                uid: "creality_ender3",
+                inputParsers: ["gcode"],
+                engine: "marlin",
+                postprocessing: false,
+                volumetric: false,
+                extruderCount: 1,
+                printBed: {
+                    circular: false,
+                    x: 220,
+                    y: 220,
+                    origin: "bottomleft"
+                },
+                filamentDiameter: 1.75,
+                nozzleDiameter: 0.4,
+                bowdenTube: 600,
+                gpxProfile: false
+            },
             {
                 name: "CR-10",
                 uid: "creality_cr10",
@@ -417,7 +479,8 @@ let presets = [
                 nozzleDiameter: 0.4,
                 bowdenTube: 600,
                 gpxProfile: false
-            }, {
+            },
+            {
                 name: "CR-10S",
                 uid: "creality_cr10s",
                 inputParsers: ["gcode"],
@@ -435,7 +498,8 @@ let presets = [
                 nozzleDiameter: 0.4,
                 bowdenTube: 800,
                 gpxProfile: false
-            }, {
+            },
+            {
                 name: "CR-10 S4",
                 uid: "creality_cr10s4",
                 inputParsers: ["gcode"],
@@ -453,7 +517,8 @@ let presets = [
                 nozzleDiameter: 0.4,
                 bowdenTube: 800,
                 gpxProfile: false
-            }, {
+            },
+            {
                 name: "CR-10 S5",
                 uid: "creality_cr10s5",
                 inputParsers: ["gcode"],
@@ -471,7 +536,8 @@ let presets = [
                 nozzleDiameter: 0.4,
                 bowdenTube: 800,
                 gpxProfile: false
-            }, {
+            },
+            {
                 name: "CR-10 MINI",
                 uid: "creality_cr10mini",
                 inputParsers: ["gcode"],
@@ -491,7 +557,8 @@ let presets = [
                 gpxProfile: false
             }
         ]
-    }, {
+    },
+    {
         name: "DreamMaker",
         prefixNameToModels: true,
         models: [
@@ -512,7 +579,8 @@ let presets = [
                 nozzleDiameter: 0.4,
                 bowdenTube: 1500,
                 gpxProfile: false
-            }, {
+            },
+            {
                 name: "Overlord Pro",
                 uid: "dreammaker_overlordpro",
                 inputParsers: ["gcode"],
@@ -531,7 +599,8 @@ let presets = [
                 gpxProfile: false
             }
         ]
-    }, {
+    },
+    {
         name: "Dremel 3D",
         prefixNameToModels: "Dremel",
         models: [
@@ -555,7 +624,8 @@ let presets = [
                 gpxProfile: false,
                 jogPauses: true,
                 independentExtruderAxes: true
-            }, {
+            },
+            {
                 name: "Idea Builder 3D40",
                 uid: "dremel_3d40",
                 inputParsers: ["g3drem"],
@@ -601,7 +671,8 @@ let presets = [
                 bowdenTube: false,
                 gpxProfile: "fcp",
                 independentExtruderAxes: true
-            }, {
+            },
+            {
                 name: "Dreamer",
                 uid: "flashforge_dreamer",
                 inputParsers: ["g", "gx", "gcode"],
@@ -621,7 +692,8 @@ let presets = [
                 gpxProfile: false,
                 jogPauses: true,
                 independentExtruderAxes: true
-            }, {
+            },
+            {
                 name: "Finder",
                 uid: "flashforge_finder",
                 inputParsers: ["g", "gx", "gcode"],
@@ -641,6 +713,30 @@ let presets = [
                 gpxProfile: false,
                 jogPauses: true,
                 independentExtruderAxes: true
+            }
+        ]
+    },
+    {
+        name: "FLUX",
+        prefixNameToModels: false,
+        models: [
+            {
+                uid: "flux_deltaplus",
+                name: "FLUX Delta+",
+                inputParsers: ["gcode"],
+                engine: "marlin",
+                postprocessing: false,
+                volumetric: false,
+                extruderCount: 1,
+                printBed: {
+                    circular: true,
+                    diameter: 170,
+                    origin: "middle"
+                },
+                filamentDiameter: 1.75,
+                nozzleDiameter: 0.4,
+                bowdenTube: false,
+                gpxProfile: false
             }
         ]
     },
@@ -668,7 +764,8 @@ let presets = [
                 gpxProfile: false
             }
         ]
-    }, {
+    },
+    {
         name: "Formbot",
         prefixNameToModels: true,
         models: [
@@ -690,7 +787,8 @@ let presets = [
                 nozzleDiameter: 0.4,
                 bowdenTube: false,
                 gpxProfile: false
-            }, {
+            },
+            {
                 uid: "formbot_trex2plus",
                 name: "T-Rex 2+",
                 inputParsers: ["gcode"],
@@ -710,7 +808,8 @@ let presets = [
                 gpxProfile: false
             }
         ]
-    }, {
+    },
+    {
         name: "Fusion3",
         prefixNameToModels: false,
         models: [
@@ -732,7 +831,8 @@ let presets = [
                 nozzleDiameter: 0.4,
                 bowdenTube: 700,
                 gpxProfile: false
-            }, {
+            },
+            {
                 uid: "fusion3_f400s_0_6",
                 name: "Fusion3 F400-S (0.6 mm)",
                 inputParsers: ["gcode"],
@@ -752,7 +852,32 @@ let presets = [
                 gpxProfile: false
             }
         ]
-    }, {
+    },
+    {
+        name: "GEEETech",
+        prefixNameToModels: true,
+        models: [
+            {
+                uid: "geeetech_rostock301",
+                name: "Rostock 301",
+                inputParsers: ["gcode"],
+                engine: "repetier",
+                postprocessing: false,
+                volumetric: false,
+                extruderCount: 3,
+                printBed: {
+                    circular: true,
+                    diameter: 170,
+                    origin: "middle"
+                },
+                filamentDiameter: 1.75,
+                nozzleDiameter: 0.4,
+                bowdenTube: 700,
+                gpxProfile: false
+            }
+        ]
+    },
+    {
         name: "gCreate",
         prefixNameToModels: true,
         models: [
@@ -774,7 +899,8 @@ let presets = [
                 nozzleDiameter: 0.4,
                 bowdenTube: false,
                 gpxProfile: false
-            }, {
+            },
+            {
                 uid: "gcreate_gmax15xtplus",
                 name: "gMax 1.5 XT+",
                 inputParsers: ["gcode"],
@@ -794,7 +920,33 @@ let presets = [
                 gpxProfile: false
             }
         ]
-    }, {
+    },
+    {
+        name: "He 3D",
+        prefixNameToModels: true,
+        models: [
+            {
+                uid: "he3d_ei3",
+                name: "Ei3",
+                inputParsers: ["gcode"],
+                engine: "repetier",
+                postprocessing: false,
+                volumetric: false,
+                extruderCount: 1,
+                printBed: {
+                    circular: false,
+                    x: 200,
+                    y: 200,
+                    origin: "bottomleft"
+                },
+                filamentDiameter: 1.75,
+                nozzleDiameter: 0.4,
+                bowdenTube: false,
+                gpxProfile: false
+            }
+        ]
+    },
+    {
         name: "Hyvision Systems",
         prefixNameToModels: "Hyvision",
         models: [
@@ -821,7 +973,8 @@ let presets = [
                 bowdenTube: false,
                 gpxProfile: false,
                 jogPauses: true
-            }, {
+            },
+            {
                 name: "Cubicon Single Plus",
                 uid: "cubicon_singleplus",
                 inputParsers: ["hvs"],
@@ -844,7 +997,8 @@ let presets = [
                 bowdenTube: false,
                 gpxProfile: false,
                 jogPauses: true
-            }, {
+            },
+            {
                 name: "Cubicon Style (3DP-210F)",
                 uid: "cubicon_style",
                 inputParsers: ["hvs"],
@@ -870,7 +1024,8 @@ let presets = [
                 firmwarePurge: 45
             }
         ]
-    }, {
+    },
+    {
         name: "MakerBot",
         prefixNameToModels: true,
         models: [
@@ -892,7 +1047,8 @@ let presets = [
                 nozzleDiameter: 0.4,
                 bowdenTube: false,
                 gpxProfile: "r2"
-            }, {
+            },
+            {
                 name: "Replicator 2X",
                 uid: "makerbot_rep2x",
                 inputParsers: ["gcode"],
@@ -910,7 +1066,8 @@ let presets = [
                 nozzleDiameter: 0.4,
                 bowdenTube: false,
                 gpxProfile: "r2x"
-            }, {
+            },
+            {
                 name: "Replicator (5th Gen)",
                 uid: "makerbot_5thgen",
                 inputParsers: ["gcode"],
@@ -930,7 +1087,8 @@ let presets = [
                 gpxProfile: false,
                 jogPauses: true,
                 customSetupInfo: customSetupInfoMakerbot5thGen
-            }, {
+            },
+            {
                 name: "Replicator+ (5th Gen)",
                 uid: "makerbot_5thgen_plus",
                 inputParsers: ["gcode"],
@@ -950,7 +1108,8 @@ let presets = [
                 gpxProfile: false,
                 jogPauses: true,
                 customSetupInfo: customSetupInfoMakerbot5thGen
-            }, {
+            },
+            {
                 name: "Replicator Mini",
                 uid: "makerbot_mini",
                 inputParsers: ["gcode"],
@@ -970,7 +1129,8 @@ let presets = [
                 gpxProfile: false,
                 jogPauses: true,
                 customSetupInfo: customSetupInfoMakerbot5thGen
-            }, {
+            },
+            {
                 name: "Replicator Mini+",
                 uid: "makerbot_mini_plus",
                 inputParsers: ["gcode"],
@@ -990,7 +1150,8 @@ let presets = [
                 gpxProfile: false,
                 jogPauses: true,
                 customSetupInfo: customSetupInfoMakerbot5thGen
-            }, {
+            },
+            {
                 name: "Replicator Z18",
                 uid: "makerbot_z18",
                 inputParsers: ["gcode"],
@@ -1012,7 +1173,8 @@ let presets = [
                 customSetupInfo: customSetupInfoMakerbot5thGen
             }
         ]
-    }, {
+    },
+    {
         name: "MakerGear",
         prefixNameToModels: true,
         models: [
@@ -1055,10 +1217,49 @@ let presets = [
                 gpxProfile: false
             }
         ]
-    }, {
+    },
+    {
         name: "Maker's Tool Works",
         prefixNameToModels: false,
         models: [
+            {
+                name: "MendelMax 3 (Single)",
+                uid: "mtw_mendelmax3",
+                inputParsers: ["gcode"],
+                engine: "marlin",
+                postprocessing: false,
+                volumetric: false,
+                extruderCount: 1,
+                printBed: {
+                    circular: false,
+                    x: 250,
+                    y: 315,
+                    origin: "middle"
+                },
+                filamentDiameter: 1.75,
+                nozzleDiameter: 0.4,
+                bowdenTube: false,
+                gpxProfile: false
+            },
+            {
+                name: "MendelMax 3 (Dual)",
+                uid: "mtw_mendelmax3d",
+                inputParsers: ["gcode"],
+                engine: "marlin",
+                postprocessing: false,
+                volumetric: false,
+                extruderCount: 2,
+                printBed: {
+                    circular: false,
+                    x: 250,
+                    y: 315,
+                    origin: "middle"
+                },
+                filamentDiameter: 1.75,
+                nozzleDiameter: 0.4,
+                bowdenTube: false,
+                gpxProfile: false
+            },
             {
                 name: "MTW Create (Single)",
                 uid: "mtw_create",
@@ -1077,7 +1278,8 @@ let presets = [
                 nozzleDiameter: 0.4,
                 bowdenTube: false,
                 gpxProfile: false
-            }, {
+            },
+            {
                 name: "MTW Create (Dual)",
                 uid: "mtw_created",
                 inputParsers: ["gcode"],
@@ -1097,7 +1299,8 @@ let presets = [
                 gpxProfile: false
             }
         ]
-    }, {
+    },
+    {
         name: "Monoprice",
         prefixNameToModels: true,
         models: [
@@ -1119,7 +1322,8 @@ let presets = [
                 nozzleDiameter: 0.4,
                 bowdenTube: 500,
                 gpxProfile: false
-            }, {
+            },
+            {
                 name: "Maker Select",
                 uid: "monoprice_maker_select",
                 inputParsers: ["gcode"],
@@ -1137,7 +1341,8 @@ let presets = [
                 nozzleDiameter: 0.4,
                 bowdenTube: false,
                 gpxProfile: false
-            }, {
+            },
+            {
                 name: "Maker Select Plus",
                 uid: "monoprice_maker_select_plus",
                 inputParsers: ["gcode"],
@@ -1155,7 +1360,8 @@ let presets = [
                 nozzleDiameter: 0.4,
                 bowdenTube: false,
                 gpxProfile: false
-            }, {
+            },
+            {
                 name: "Maker Ultimate",
                 uid: "monoprice_maker_ultimate",
                 inputParsers: ["gcode"],
@@ -1175,7 +1381,8 @@ let presets = [
                 gpxProfile: false
             }
         ]
-    }, {
+    },
+    {
         name: "Printrbot",
         prefixNameToModels: true,
         models: [
@@ -1199,7 +1406,8 @@ let presets = [
                 gpxProfile: false
             }
         ]
-    }, {
+    },
+    {
         name: "Prusa",
         prefixNameToModels: false,
         models: [
@@ -1221,7 +1429,8 @@ let presets = [
                 nozzleDiameter: 0.4,
                 bowdenTube: false,
                 gpxProfile: false
-            }, {
+            },
+            {
                 name: "Prusa i3 MK2S",
                 uid: "prusa_i3mk2s",
                 inputParsers: ["gcode"],
@@ -1239,9 +1448,29 @@ let presets = [
                 nozzleDiameter: 0.4,
                 bowdenTube: false,
                 gpxProfile: false
+            },
+            {
+                name: "Prusa i3 MK3",
+                uid: "prusa_i3mk3",
+                inputParsers: ["gcode"],
+                engine: "marlin",
+                postprocessing: false,
+                volumetric: false,
+                extruderCount: 1,
+                printBed: {
+                    circular: false,
+                    x: 250,
+                    y: 210,
+                    origin: "bottomleft"
+                },
+                filamentDiameter: 1.75,
+                nozzleDiameter: 0.4,
+                bowdenTube: false,
+                gpxProfile: false
             }
         ]
-    }, {
+    },
+    {
         name: "Qidi Tech",
         prefixNameToModels: true,
         models: [
@@ -1265,7 +1494,8 @@ let presets = [
                 gpxProfile: false
             }
         ]
-    }, {
+    },
+    {
         name: "Raise3D",
         prefixNameToModels: false,
         models: [
@@ -1287,7 +1517,8 @@ let presets = [
                 nozzleDiameter: 0.4,
                 bowdenTube: false,
                 gpxProfile: false
-            }, {
+            },
+            {
                 name: "Raise3D N2 (Dual)",
                 uid: "raise3d_n2d",
                 inputParsers: ["gcode"],
@@ -1305,7 +1536,8 @@ let presets = [
                 nozzleDiameter: 0.4,
                 bowdenTube: false,
                 gpxProfile: false
-            }, {
+            },
+            {
                 name: "Raise3D N2 Plus (Single)",
                 uid: "raise3d_n2plus",
                 inputParsers: ["gcode"],
@@ -1323,7 +1555,8 @@ let presets = [
                 nozzleDiameter: 0.4,
                 bowdenTube: false,
                 gpxProfile: false
-            }, {
+            },
+            {
                 name: "Raise3D N2 Plus (Dual)",
                 uid: "raise3d_n2plusd",
                 inputParsers: ["gcode"],
@@ -1343,7 +1576,8 @@ let presets = [
                 gpxProfile: false
             }
         ]
-    }, {
+    },
+    {
         name: "Robo 3D",
         prefixNameToModels: false,
         models: [
@@ -1366,7 +1600,8 @@ let presets = [
                 bowdenTube: false,
                 gpxProfile: false,
                 customSetupInfo: customSetupInfoRoboC2
-            }, {
+            },
+            {
                 name: "Robo R1+",
                 uid: "robo_r1plus",
                 inputParsers: ["gcode"],
@@ -1385,7 +1620,8 @@ let presets = [
                 bowdenTube: false,
                 gpxProfile: false,
                 customSetupInfo: customSetupInfoRoboC2
-            }, {
+            },
+            {
                 name: "Robo R2",
                 uid: "robo_r2",
                 inputParsers: ["gcode"],
@@ -1405,7 +1641,8 @@ let presets = [
                 gpxProfile: false,
                 firmwarePurge: 15,
                 customSetupInfo: customSetupInfoRoboR2
-            }, {
+            },
+            {
                 name: "Robo C2",
                 uid: "robo_c2",
                 inputParsers: ["gcode"],
@@ -1427,7 +1664,8 @@ let presets = [
                 customSetupInfo: customSetupInfoRoboC2
             }
         ]
-    }, {
+    },
+    {
         name: "SeeMeCNC",
         prefixNameToModels: true,
         models: [
@@ -1448,7 +1686,8 @@ let presets = [
                 nozzleDiameter: 0.5,
                 bowdenTube: 750,
                 gpxProfile: false
-            }, {
+            },
+            {
                 name: "Orion",
                 uid: "seemecnc_orion",
                 inputParsers: ["gcode"],
@@ -1465,7 +1704,8 @@ let presets = [
                 nozzleDiameter: 0.5,
                 bowdenTube: 1500,
                 gpxProfile: false
-            }, {
+            },
+            {
                 name: "Rostock MAX v2",
                 uid: "seemecnc_rostockmaxv2",
                 inputParsers: ["gcode"],
@@ -1482,7 +1722,8 @@ let presets = [
                 nozzleDiameter: 0.5,
                 bowdenTube: 650,
                 gpxProfile: false
-            }, {
+            },
+            {
                 name: "Rostock MAX v3",
                 uid: "seemecnc_rostockmaxv3",
                 inputParsers: ["gcode"],
@@ -1501,7 +1742,33 @@ let presets = [
                 gpxProfile: false
             }
         ]
-    }, {
+    },
+    {
+        name: "Snapmaker",
+        prefixNameToModels: false,
+        models: [
+            {
+                name: "Snapmaker 3-in-1",
+                uid: "snapmaker_3in1",
+                inputParsers: ["gcode"],
+                engine: "marlin",
+                postprocessing: false,
+                volumetric: false,
+                extruderCount: 1,
+                printBed: {
+                    circular: false,
+                    x: 125,
+                    y: 125,
+                    origin: "bottomleft"
+                },
+                filamentDiameter: 1.75,
+                nozzleDiameter: 0.4,
+                bowdenTube: false,
+                gpxProfile: false
+            },
+        ]
+    },
+    {
         name: "TEVO 3D",
         prefixNameToModels: "TEVO",
         models: [
@@ -1523,7 +1790,8 @@ let presets = [
                 nozzleDiameter: 0.4,
                 bowdenTube: false,
                 gpxProfile: false
-            }, {
+            },
+            {
                 name: "Little Monster",
                 uid: "tevo_littlemonster",
                 inputParsers: ["gcode"],
@@ -1540,7 +1808,8 @@ let presets = [
                 nozzleDiameter: 0.4,
                 bowdenTube: 1500,
                 gpxProfile: false
-            }, {
+            },
+            {
                 name: "Tornado",
                 uid: "tevo_tornado",
                 inputParsers: ["gcode"],
@@ -1560,7 +1829,8 @@ let presets = [
                 gpxProfile: false
             }
         ]
-    }, {
+    },
+    {
         name: "Type A Machines",
         prefixNameToModels: "Type A",
         models: [
@@ -1583,7 +1853,8 @@ let presets = [
                 bowdenTube: false,
                 gpxProfile: false,
                 customSetupInfo: customSetupInfoTypeA
-            }, {
+            },
+            {
                 name: "Series 1 Pro",
                 uid: "typea_series1pro",
                 inputParsers: ["gcode"],
@@ -1604,10 +1875,30 @@ let presets = [
                 customSetupInfo: customSetupInfoTypeA
             }
         ]
-    }, {
+    },
+    {
         name: "Wanhao",
         prefixNameToModels: true,
         models: [
+            {
+                name: "Duplicator i3",
+                uid: "wanhao_duplicatori3",
+                inputParsers: ["gcode"],
+                engine: "marlin",
+                postprocessing: false,
+                volumetric: false,
+                extruderCount: 1,
+                printBed: {
+                    circular: false,
+                    x: 200,
+                    y: 200,
+                    origin: "bottomleft"
+                },
+                filamentDiameter: 1.75,
+                nozzleDiameter: 0.4,
+                bowdenTube: false,
+                gpxProfile: false
+            },
             {
                 name: "Duplicator 4 (Single)",
                 uid: "wanhao_duplicator4",
@@ -1626,7 +1917,8 @@ let presets = [
                 nozzleDiameter: 0.4,
                 bowdenTube: false,
                 gpxProfile: "r1"
-            }, {
+            },
+            {
                 name: "Duplicator 4 (Dual)",
                 uid: "wanhao_duplicator4d",
                 inputParsers: ["gcode"],
@@ -1644,7 +1936,8 @@ let presets = [
                 nozzleDiameter: 0.4,
                 bowdenTube: false,
                 gpxProfile: "r1d"
-            }, {
+            },
+            {
                 name: "Duplicator 6",
                 uid: "wanhao_duplicator6",
                 inputParsers: ["gcode"],

@@ -172,6 +172,35 @@ function checkInfillDump(raft, allowDumpInInfill = true, allowDumpInSupports = f
 
 // PREFLIGHT UTILITIES
 
+function checkBounds(state, boundingBox) {
+    let currentX = state.get("x").position;
+    let currentY = state.get("y").position;
+    let currentZ = state.get("z").position;
+    if (boundingBox.xInitialized()) {
+        if (currentX > boundingBox.xMax) {
+            boundingBox.xMax = currentX;
+        } else if (currentX < boundingBox.xMin) {
+            boundingBox.xMin = currentX;
+        }
+    } else {
+        boundingBox.xMax = currentX;
+        boundingBox.xMin = currentX;
+    }
+    if (boundingBox.yInitialized()) {
+        if (currentY > boundingBox.yMax) {
+            boundingBox.yMax = currentY;
+        } else if (currentY < boundingBox.yMin) {
+            boundingBox.yMin = currentY;
+        }
+    } else {
+        boundingBox.yMax = currentY;
+        boundingBox.yMin = currentY;
+    }
+    if (currentZ > boundingBox.zMax) {
+        boundingBox.zMax = currentZ;
+    }
+}
+
 function checkToolchangeRetractionSettings(retraction, toolChangeRetraction) {
     return (
         toolChangeRetraction !== 0
@@ -494,6 +523,7 @@ async function addOEMData(raft, msf) {
     raft.insertInstruction(new Raft.StopInstruction({}));
 }
 
+
 class Print {
 
     constructor(filePath, printerProfile, printExtruder = 0) {
@@ -581,7 +611,7 @@ class Print {
             rapidZ: 0
         };
 
-        let boundingBox = new BoundingBox();
+        const boundingBox = new BoundingBox();
         boundingBox.zMin = 0;
         boundingBox.zMax = 0;
 
@@ -911,37 +941,9 @@ class Print {
                         let previousE = raft.getCurrentState().get("extrusion").position;
                         raft.stepForward();
                         if (currentE > previousE) {
-                            function checkBounds(state) {
-                                let currentX = state.get("x").position;
-                                let currentY = state.get("y").position;
-                                let currentZ = state.get("z").position;
-                                if (boundingBox.xInitialized()) {
-                                    if (currentX > boundingBox.xMax) {
-                                        boundingBox.xMax = currentX;
-                                    } else if (currentX < boundingBox.xMin) {
-                                        boundingBox.xMin = currentX;
-                                    }
-                                } else {
-                                    boundingBox.xMax = currentX;
-                                    boundingBox.xMin = currentX;
-                                }
-                                if (boundingBox.yInitialized()) {
-                                    if (currentY > boundingBox.yMax) {
-                                        boundingBox.yMax = currentY;
-                                    } else if (currentY < boundingBox.yMin) {
-                                        boundingBox.yMin = currentY;
-                                    }
-                                } else {
-                                    boundingBox.yMax = currentY;
-                                    boundingBox.yMin = currentY;
-                                }
-                                if (currentZ > boundingBox.zMax) {
-                                    boundingBox.zMax = currentZ;
-                                }
-                            }
-                            checkBounds(state);
+                            checkBounds(state, boundingBox);
                             raft.stepBackward();
-                            checkBounds(raft.getCurrentState());
+                            checkBounds(raft.getCurrentState(), boundingBox);
                             raft.stepForward();
                         }
                     }
@@ -2035,7 +2037,7 @@ class Print {
                     }
                     if (changeTowerLayer) {
                         let nextTowerLayer = tower.towerLayerHeights[tower.towerLayerHeights.indexOf(lastTowerLayer) + 1];
-                        if (nextTowerLayer === undefined) {
+                        if (nextTowerLayer === undefined || nextTowerLayer < lastTowerLayer) {
                             nextTowerLayer = null;
                         } else {
                             lastTowerLayer = nextTowerLayer;
