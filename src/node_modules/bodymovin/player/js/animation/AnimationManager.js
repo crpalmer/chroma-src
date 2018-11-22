@@ -15,7 +15,7 @@ var animationManager = (function(){
                 i -= 1;
                 len -= 1;
                 if(!animItem.isPaused){
-                    subtractPlayingCount();
+                    subtractPlayingCount();   
                 }
             }
             i += 1;
@@ -105,13 +105,13 @@ var animationManager = (function(){
         }
         initTime = nowTime;
         if(!idled) {
-            window.requestAnimationFrame(resume);
+            requestAnimationFrame(resume);
         }
     }
 
     function first(nowTime){
         initTime = nowTime;
-        window.requestAnimationFrame(resume);
+        requestAnimationFrame(resume);
     }
 
     function pause(animation) {
@@ -181,13 +181,13 @@ var animationManager = (function(){
     }
 
     function start(){
-        window.requestAnimationFrame(first);
+        requestAnimationFrame(first);
     }
 
     function activate(){
         if(idled){
             idled = false;
-            window.requestAnimationFrame(first);
+            requestAnimationFrame(first);
         }
     }
 
