@@ -13,7 +13,8 @@ const MSF = require("./models/msf");
 const chroma1ConfigFile = path.join(app.getPath("userData"), "app.yml");
 const chroma2ConfigFile = path.join(app.getPath("userData"), "chroma-2.yml");
 const profileDir = path.join(app.getPath("userData"), "profiles");
-const materialFile = path.join(app.getPath("userData"), "materials.yml");
+const materialFile1 = path.join(app.getPath("userData"), "materials.yml");
+const materialFile2 = path.join(app.getPath("userData"), "materials-2.yml");
 
 function loadYML(ymlPath) {
     return yaml.load(fs.readFileSync(ymlPath).toString());
@@ -222,7 +223,7 @@ function resetConfigFile() {
     });
     PrinterProfiles.setActiveProfileIndex(0);
     writeConfigFile();
-    materialMatrix.matrix = materialMatrix.getDefault();
+    materialMatrix.globalMatrix = materialMatrix.getDefault();
     saveMaterials();
 
 }
@@ -243,12 +244,14 @@ function loadProfiles() {
 }
 
 function loadMaterials() {
-    if (!fs.existsSync(materialFile)) {
-        saveMaterials();
-        return;
+    let needsSave = false;
+    if (fs.existsSync(materialFile2)) {
+        materialMatrix.globalMatrix = materialMatrix.unserialize(yaml.load(fs.readFileSync(materialFile2).toString()));
+    } else if (fs.existsSync(materialFile1)) {
+        needsSave = true;
+        materialMatrix.globalMatrix = materialMatrix.unserialize(yaml.load(fs.readFileSync(materialFile1).toString()));
     }
-    materialMatrix.matrix = materialMatrix.unserialize(yaml.load(fs.readFileSync(materialFile).toString()));
-    if (materialMatrix.matrix.needsSaveForUUIDs) {
+    if (needsSave || materialMatrix.globalMatrix.needsSaveForUUIDs) {
         saveMaterials();
     }
 }
@@ -265,8 +268,8 @@ function saveProfile(profile) {
 }
 
 function saveMaterials() {
-    let yml = materialMatrix.matrix.serialize();
-    fs.writeFileSync(materialFile, yaml.safeDump(JSON.parse(JSON.stringify(yml))));
+    let yml = materialMatrix.globalMatrix.serialize();
+    fs.writeFileSync(materialFile2, yaml.safeDump(JSON.parse(JSON.stringify(yml))));
 }
 
 function importMaterials(inpath) {

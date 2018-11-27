@@ -3,6 +3,9 @@ const ieee754 = require("ieee754");
 
 const MaterialMatrix = require("./material-matrix");
 
+const EOL = "\r\n";
+const MSF2_CHAR_LIMIT = 32;
+
 const colorInfo = [
     {
         value: 0,
@@ -158,6 +161,11 @@ function resetColorStrengths() {
 function intToHexString(int, minHexDigits) {
     return ("0".repeat(minHexDigits) + int.toString(16)).substr(-minHexDigits);
 }
+function int16ToHexString(int) {
+    const buf = Buffer.alloc(2);
+    buf.writeInt16BE(int, 0);
+    return buf.toString('hex');
+}
 function floatToHexString(float) {
     let buffer = Buffer.alloc(4);
     let output = "";
@@ -169,6 +177,12 @@ function floatToHexString(float) {
 }
 function hexStringToInt(hexString) {
     return parseInt(hexString, 16);
+}
+function hexStringToInt16(hexString) {
+    const rawUnsignedVal = parseInt(hexString, 16);
+    const buf = Buffer.alloc(2);
+    buf.writeUInt16BE(rawUnsignedVal, 0);
+    return buf.readInt16BE(0);
 }
 function hexStringToFloat(hexString) {
     return Buffer(hexString, "hex").readFloatBE(0);
@@ -243,72 +257,85 @@ function getFilamentLengthsByDrive(spliceList) {
     return filamentLengths;
 }
 
-let msf1_2Functions = {
+function msfVersionToO21(major, minor) {
+    const version = (major * 10) + minor;
+    return "O21 D" + intToHexString(version, 4) + EOL;
+}
+
+function replaceSpaces(input) {
+    return input.replace(/ /g, "_");
+}
+
+function truncate(input, length) {
+    return input.substr(0, length);
+}
+
+const msf1_2Functions = {
     createMSF: function () {
         let colorsUsed = getColorsUsedHex(this.colorsUsed);
-        let msfOutput = "MSF1.2\r\n";
-        msfOutput += "cu:" + colorsUsed[0] + colorsUsed[1] + colorsUsed[2] + colorsUsed[3] + "\r\n";       // drives used
-        msfOutput += "ppm:" + floatToHexString(this.pulsesPerMM) + "\r\n";             // pulses per MM
-        msfOutput += "lo:" + intToHexString(this.loadingOffset, 4) + "\r\n";           // loading offset
-        msfOutput += "ns:" + intToHexString(this.spliceList.length, 4) + "\r\n";       // number of splices
-        msfOutput += "np:" + intToHexString(this.pingList.length, 4) + "\r\n";         // number of pings
+        let msfOutput = "MSF1.2" + EOL;
+        msfOutput += "cu:" + colorsUsed[0] + colorsUsed[1] + colorsUsed[2] + colorsUsed[3] + EOL;       // drives used
+        msfOutput += "ppm:" + floatToHexString(this.pulsesPerMM) + EOL;             // pulses per MM
+        msfOutput += "lo:" + intToHexString(this.loadingOffset, 4) + EOL;           // loading offset
+        msfOutput += "ns:" + intToHexString(this.spliceList.length, 4) + EOL;       // number of splices
+        msfOutput += "np:" + intToHexString(this.pingList.length, 4) + EOL;         // number of pings
         // create the output splice list (splices in the list are of the form [drive#, lengthInMM])
         this.spliceList.forEach(function (splice) {
-            msfOutput += "(" + intToHexString(splice[0], 2) + "," + floatToHexString(splice[1]) + ")\r\n";
+            msfOutput += "(" + intToHexString(splice[0], 2) + "," + floatToHexString(splice[1]) + ")" + EOL;
         });
         // create the output ping list (pings in the list are of the form [startLength, endLength])
         this.pingList.forEach(function (ping) {
-            msfOutput += "(64," + floatToHexString(ping[0]) + ")\r\n";
+            msfOutput += "(64," + floatToHexString(ping[0]) + ")" + EOL;
         });
         return msfOutput;
     },
     createPlainMSF: function () {
         let colorsUsed = getColorsUsedLabels(this.colorsUsed);
-        let msfOutput = "MSF1.2\r\n\r\n";
+        let msfOutput = "MSF1.2" + EOL + EOL;
 
         if (this.printerProfile) {
-            msfOutput += "Printer Profile:  " + this.printerProfile + "\r\n";
+            msfOutput += "Printer Profile:  " + this.printerProfile.profileName + EOL;
         }
         msfOutput += "Drives Used:      " + colorsUsed[0] + ", " + colorsUsed[1] + ", "
-            + colorsUsed[2] + ", " + colorsUsed[3] + "\r\n";
-        msfOutput += "Pulses Per MM:    " + this.pulsesPerMM + "\r\n";
-        msfOutput += "Loading Offset:   " + this.loadingOffset + "\r\n";
-        msfOutput += "Splice Count:     " + this.spliceList.length + "\r\n";
-        msfOutput += "Ping Count:       " + this.pingList.length + "\r\n";
+            + colorsUsed[2] + ", " + colorsUsed[3] + EOL;
+        msfOutput += "Pulses Per MM:    " + this.pulsesPerMM + EOL;
+        msfOutput += "Loading Offset:   " + this.loadingOffset + EOL;
+        msfOutput += "Splice Count:     " + this.spliceList.length + EOL;
+        msfOutput += "Ping Count:       " + this.pingList.length + EOL;
 
         // create the output splice list (splices in the list are of the form [drive#, lengthInMM])
         if (this.spliceList.length > 0) {
-            msfOutput += "\r\n";
+            msfOutput += EOL;
             let filamentLengths = getFilamentLengthsByDrive(this.spliceList);
             let totalLength = getTotalFilamentLength(this.spliceList);
-            msfOutput += "Filament Used\r\n";
+            msfOutput += "Filament Used" + EOL;
             if (this.colorsUsed[0]) {
-                msfOutput += "Drive 1:          " + (filamentLengths[0] / 1000).toFixed(2) + " m\r\n";
+                msfOutput += "Drive 1:          " + (filamentLengths[0] / 1000).toFixed(2) + " m" + EOL;
             }
             if (this.colorsUsed[1]) {
-                msfOutput += "Drive 2:          " + (filamentLengths[1] / 1000).toFixed(2) + " m\r\n";
+                msfOutput += "Drive 2:          " + (filamentLengths[1] / 1000).toFixed(2) + " m" + EOL;
             }
             if (this.colorsUsed[2]) {
-                msfOutput += "Drive 3:          " + (filamentLengths[2] / 1000).toFixed(2) + " m\r\n";
+                msfOutput += "Drive 3:          " + (filamentLengths[2] / 1000).toFixed(2) + " m" + EOL;
             }
             if (this.colorsUsed[3]) {
-                msfOutput += "Drive 4:          " + (filamentLengths[3] / 1000).toFixed(2) + " m\r\n";
+                msfOutput += "Drive 4:          " + (filamentLengths[3] / 1000).toFixed(2) + " m" + EOL;
             }
-            msfOutput += "Total:            " + (totalLength / 1000).toFixed(2) + " m\r\n";
-            msfOutput += "\r\n";
+            msfOutput += "Total:            " + (totalLength / 1000).toFixed(2) + " m" + EOL;
+            msfOutput += EOL;
             this.spliceList.forEach(function (splice) {
-                msfOutput += "(" + splice[0] + ", " + splice[1] + ")\r\n";
+                msfOutput += "(" + splice[0] + ", " + splice[1] + ")" + EOL;
             });
         }
 
         // create the output ping list (pings in the list are of the form [startLength, endLength])
         if (this.pingList.length > 0) {
-            msfOutput += "\r\n";
+            msfOutput += EOL;
             this.pingList.forEach(function (ping) {
                 if (ping[1] === undefined) {
-                    msfOutput += "(PING, " + ping[0] + ")\r\n";
+                    msfOutput += "(PING, " + ping[0] + ")" + EOL;
                 } else {
-                    msfOutput += "(PING, " + ping[0] + " - " + (ping[1] - ping[0]) + " mm)\r\n";
+                    msfOutput += "(PING, " + ping[0] + " - " + (ping[1] - ping[0]) + " mm)" + EOL;
                 }
             });
         }
@@ -317,77 +344,77 @@ let msf1_2Functions = {
     }
 };
 
-let msf1_3Functions = {
+const msf1_3Functions = {
     createMSF: function () {
         let colorsUsed = getColorsUsedHex(this.colorsUsed);
-        let msfOutput = "MSF1.3\r\n";
-        msfOutput += "cu:" + colorsUsed[0] + colorsUsed[1] + colorsUsed[2] + colorsUsed[3] + "\r\n";       // drives used
-        msfOutput += "ppm:" + floatToHexString(this.pulsesPerMM) + "\r\n";             // pulses per MM
-        msfOutput += "lo:" + intToHexString(this.loadingOffset, 4) + "\r\n";           // loading offset
-        msfOutput += "hf:" + intToHexString(this.heatFactor, 4) + "\r\n";              // loading offset
-        msfOutput += "ns:" + intToHexString(this.spliceList.length, 4) + "\r\n";       // number of splices
-        msfOutput += "np:" + intToHexString(this.pingList.length, 4) + "\r\n";         // number of pings
-        msfOutput += "nh:" + intToHexString(0, 4) + "\r\n";                             // number of hot swaps (0 for now)
+        let msfOutput = "MSF1.3" + EOL;
+        msfOutput += "cu:" + colorsUsed[0] + colorsUsed[1] + colorsUsed[2] + colorsUsed[3] + EOL;       // drives used
+        msfOutput += "ppm:" + floatToHexString(this.pulsesPerMM) + EOL;             // pulses per MM
+        msfOutput += "lo:" + intToHexString(this.loadingOffset, 4) + EOL;           // loading offset
+        msfOutput += "hf:" + intToHexString(this.heatFactor, 4) + EOL;              // loading offset
+        msfOutput += "ns:" + intToHexString(this.spliceList.length, 4) + EOL;       // number of splices
+        msfOutput += "np:" + intToHexString(this.pingList.length, 4) + EOL;         // number of pings
+        msfOutput += "nh:" + intToHexString(0, 4) + EOL;                             // number of hot swaps (0 for now)
         // create the output splice list (splices in the list are of the form [drive#, lengthInMM])
         this.spliceList.forEach(function (splice) {
-            msfOutput += "(" + intToHexString(splice[0], 2) + "," + floatToHexString(splice[1]) + ")\r\n";
+            msfOutput += "(" + intToHexString(splice[0], 2) + "," + floatToHexString(splice[1]) + ")" + EOL;
         });
         // create the output ping list (pings in the list are of the form [startLength, endLength])
         this.pingList.forEach(function (ping) {
-            msfOutput += "(64," + floatToHexString(ping[0]) + ")\r\n";
+            msfOutput += "(64," + floatToHexString(ping[0]) + ")" + EOL;
         });
 
         return msfOutput;
     },
     createPlainMSF: function () {
         let colorsUsed = getColorsUsedLabels(this.colorsUsed);
-        let msfOutput = "MSF1.3\r\n\r\n";
+        let msfOutput = "MSF1.3" + EOL + EOL;
 
         if (this.printerProfile) {
-            msfOutput += "Printer Profile:  " + this.printerProfile + "\r\n";
+            msfOutput += "Printer Profile:  " + this.printerProfile.profileName + EOL;
         }
         msfOutput += "Drives Used:      " + colorsUsed[0] + ", " + colorsUsed[1] + ", "
-            + colorsUsed[2] + ", " + colorsUsed[3] + "\r\n";
-        msfOutput += "Pulses Per MM:    " + this.pulsesPerMM + "\r\n";
-        msfOutput += "Loading Offset:   " + this.loadingOffset + "\r\n";
-        msfOutput += "Heating Factor:   " + this.heatFactor + "\r\n";
-        msfOutput += "Splice Count:     " + this.spliceList.length + "\r\n";
-        msfOutput += "Ping Count:       " + this.pingList.length + "\r\n";
-        msfOutput += "Hot Swap Count:   " + this.hotSwapList.length + "\r\n";
+            + colorsUsed[2] + ", " + colorsUsed[3] + EOL;
+        msfOutput += "Pulses Per MM:    " + this.pulsesPerMM + EOL;
+        msfOutput += "Loading Offset:   " + this.loadingOffset + EOL;
+        msfOutput += "Heating Factor:   " + this.heatFactor + EOL;
+        msfOutput += "Splice Count:     " + this.spliceList.length + EOL;
+        msfOutput += "Ping Count:       " + this.pingList.length + EOL;
+        msfOutput += "Hot Swap Count:   " + this.hotSwapList.length + EOL;
 
         // create the output splice list (splices in the list are of the form [drive#, lengthInMM])
         if (this.spliceList.length > 0) {
-            msfOutput += "\r\n";
+            msfOutput += EOL;
             let filamentLengths = getFilamentLengthsByDrive(this.spliceList);
             let totalLength = getTotalFilamentLength(this.spliceList);
-            msfOutput += "Filament Used\r\n";
+            msfOutput += "Filament Used" + EOL;
             if (this.colorsUsed[0]) {
-                msfOutput += "Drive 1:          " + (filamentLengths[0] / 1000).toFixed(2) + " m\r\n";
+                msfOutput += "Drive 1:          " + (filamentLengths[0] / 1000).toFixed(2) + " m" + EOL;
             }
             if (this.colorsUsed[1]) {
-                msfOutput += "Drive 2:          " + (filamentLengths[1] / 1000).toFixed(2) + " m\r\n";
+                msfOutput += "Drive 2:          " + (filamentLengths[1] / 1000).toFixed(2) + " m" + EOL;
             }
             if (this.colorsUsed[2]) {
-                msfOutput += "Drive 3:          " + (filamentLengths[2] / 1000).toFixed(2) + " m\r\n";
+                msfOutput += "Drive 3:          " + (filamentLengths[2] / 1000).toFixed(2) + " m" + EOL;
             }
             if (this.colorsUsed[3]) {
-                msfOutput += "Drive 4:          " + (filamentLengths[3] / 1000).toFixed(2) + " m\r\n";
+                msfOutput += "Drive 4:          " + (filamentLengths[3] / 1000).toFixed(2) + " m" + EOL;
             }
-            msfOutput += "Total:            " + (totalLength / 1000).toFixed(2) + " m\r\n";
-            msfOutput += "\r\n";
+            msfOutput += "Total:            " + (totalLength / 1000).toFixed(2) + " m" + EOL;
+            msfOutput += EOL;
             this.spliceList.forEach(function (splice) {
-                msfOutput += "(" + splice[0] + ", " + splice[1] + ")\r\n";
+                msfOutput += "(" + splice[0] + ", " + splice[1] + ")" + EOL;
             });
         }
 
         // create the output ping list (pings in the list are of the form [startLength, endLength])
         if (this.pingList.length > 0) {
-            msfOutput += "\r\n";
+            msfOutput += EOL;
             this.pingList.forEach(function (ping) {
                 if (ping[1] === undefined) {
-                    msfOutput += "(PING, " + ping[0] + ")\r\n";
+                    msfOutput += "(PING, " + ping[0] + ")" + EOL;
                 } else {
-                    msfOutput += "(PING, " + ping[0] + " - " + (ping[1] - ping[0]) + " mm)\r\n";
+                    msfOutput += "(PING, " + ping[0] + " - " + (ping[1] - ping[0]) + " mm)" + EOL;
                 }
             });
         }
@@ -396,99 +423,279 @@ let msf1_3Functions = {
     }
 };
 
-let msf1_4Functions = {
+const msf1_4Functions = {
     createMSF: function () {
         let colorsUsed = getColorsUsedLabels1_4(this.materials);
-        let msfOutput = "MSF1.4\r\n";
+        let msfOutput = "MSF1.4" + EOL;
         msfOutput += "cu:" + this.materials[0].index + colorsUsed[0] + ";"
             + this.materials[1].index + colorsUsed[1] + ";"
             + this.materials[2].index + colorsUsed[2] + ";"
-            + this.materials[3].index + colorsUsed[3] + ";" + "\r\n";       // drives used
-        msfOutput += "ppm:" + floatToHexString(this.pulsesPerMM) + "\r\n";             // pulses per MM
-        msfOutput += "lo:" + intToHexString(this.loadingOffset, 4) + "\r\n";           // loading offset
-        msfOutput += "ns:" + intToHexString(this.spliceList.length, 4) + "\r\n";       // number of splices
-        msfOutput += "np:" + intToHexString(this.pingList.length, 4) + "\r\n";         // number of pings
-        msfOutput += "nh:" + intToHexString(0, 4) + "\r\n";                            // number of hot swaps (0 for now)
-        msfOutput += "na:" + intToHexString(this.algorithmsList.length, 4) + "\r\n";   // number of algorithms
+            + this.materials[3].index + colorsUsed[3] + ";" + EOL;       // drives used
+        msfOutput += "ppm:" + floatToHexString(this.pulsesPerMM) + EOL;             // pulses per MM
+        msfOutput += "lo:" + intToHexString(this.loadingOffset, 4) + EOL;           // loading offset
+        msfOutput += "ns:" + intToHexString(this.spliceList.length, 4) + EOL;       // number of splices
+        msfOutput += "np:" + intToHexString(this.pingList.length, 4) + EOL;         // number of pings
+        msfOutput += "nh:" + intToHexString(0, 4) + EOL;                            // number of hot swaps (0 for now)
+        msfOutput += "na:" + intToHexString(this.algorithmsList.length, 4) + EOL;   // number of algorithms
         // create the output splice list (splices in the list are of the form [drive#, lengthInMM])
         this.spliceList.forEach(function (splice) {
-            msfOutput += "(" + intToHexString(splice[0], 2) + "," + floatToHexString(splice[1]) + ")\r\n";
+            msfOutput += "(" + intToHexString(splice[0], 2) + "," + floatToHexString(splice[1]) + ")" + EOL;
         });
         // create the output ping list (pings in the list are of the form [startLength, endLength])
         this.pingList.forEach(function (ping) {
-            msfOutput += "(64," + floatToHexString(ping[0]) + ")\r\n";
+            msfOutput += "(64," + floatToHexString(ping[0]) + ")" + EOL;
         });
         // create the algorithms list (algorithms in this list are objects)
         this.algorithmsList.forEach(function (alg) {
             msfOutput += "(" + alg.ingoing + alg.outgoing + "," + floatToHexString(alg.heatFactor) + ","
-                + floatToHexString(alg.compressionFactor) + "," + (alg.reverse ? 1 : 0) + ")\r\n";
+                + floatToHexString(alg.compressionFactor) + "," + (alg.reverse ? 1 : 0) + ")" + EOL;
         });
 
         return msfOutput;
     },
     createPlainMSF: function () {
         let materialsUsed = getMaterialsUsedLabels1_4(this.materials);
-        let msfOutput = "MSF1.4\r\n\r\n";
+        let msfOutput = "MSF1.4" + EOL + EOL;
 
         if (this.printerProfile) {
-            msfOutput += "Printer Profile:  " + this.printerProfile + "\r\n";
+            msfOutput += "Printer Profile:  " + this.printerProfile.profileName + EOL;
         }
         msfOutput += "Materials Used:   " + materialsUsed[0].trim() + ", " + materialsUsed[1].trim() + ", "
-            + materialsUsed[2].trim() + ", " + materialsUsed[3].trim() + "\r\n";
-        msfOutput += "Pulses Per MM:    " + this.pulsesPerMM + "\r\n";
-        msfOutput += "Loading Offset:   " + this.loadingOffset + "\r\n";
-        msfOutput += "Splice Count:     " + this.spliceList.length + "\r\n";
-        msfOutput += "Ping Count:       " + this.pingList.length + "\r\n";
-        msfOutput += "Hot Swap Count:   " + this.hotSwapList.length + "\r\n";
-        msfOutput += "Algorithm Count:  " + this.algorithmsList.length + "\r\n";
+            + materialsUsed[2].trim() + ", " + materialsUsed[3].trim() + EOL;
+        msfOutput += "Pulses Per MM:    " + this.pulsesPerMM + EOL;
+        msfOutput += "Loading Offset:   " + this.loadingOffset + EOL;
+        msfOutput += "Splice Count:     " + this.spliceList.length + EOL;
+        msfOutput += "Ping Count:       " + this.pingList.length + EOL;
+        msfOutput += "Hot Swap Count:   " + this.hotSwapList.length + EOL;
+        msfOutput += "Algorithm Count:  " + this.algorithmsList.length + EOL;
 
         // create the output splice list (splices in the list are of the form [drive#, lengthInMM])
         if (this.spliceList.length > 0) {
-            msfOutput += "\r\n";
+            msfOutput += EOL;
             let filamentLengths = getFilamentLengthsByDrive(this.spliceList);
             let totalLength = getTotalFilamentLength(this.spliceList);
-            msfOutput += "Filament Used\r\n";
+            msfOutput += "Filament Used" + EOL;
             if (this.colorsUsed[0]) {
-                msfOutput += "Drive 1:          " + (filamentLengths[0] / 1000).toFixed(2) + " m\r\n";
+                msfOutput += "Drive 1:          " + (filamentLengths[0] / 1000).toFixed(2) + " m" + EOL;
             }
             if (this.colorsUsed[1]) {
-                msfOutput += "Drive 2:          " + (filamentLengths[1] / 1000).toFixed(2) + " m\r\n";
+                msfOutput += "Drive 2:          " + (filamentLengths[1] / 1000).toFixed(2) + " m" + EOL;
             }
             if (this.colorsUsed[2]) {
-                msfOutput += "Drive 3:          " + (filamentLengths[2] / 1000).toFixed(2) + " m\r\n";
+                msfOutput += "Drive 3:          " + (filamentLengths[2] / 1000).toFixed(2) + " m" + EOL;
             }
             if (this.colorsUsed[3]) {
-                msfOutput += "Drive 4:          " + (filamentLengths[3] / 1000).toFixed(2) + " m\r\n";
+                msfOutput += "Drive 4:          " + (filamentLengths[3] / 1000).toFixed(2) + " m" + EOL;
             }
-            msfOutput += "Total:            " + (totalLength / 1000).toFixed(2) + " m\r\n";
-            msfOutput += "\r\n";
+            msfOutput += "Total:            " + (totalLength / 1000).toFixed(2) + " m" + EOL;
+            msfOutput += EOL;
             this.spliceList.forEach(function (splice) {
-                msfOutput += "(" + splice[0] + ", " + splice[1] + ")\r\n";
+                msfOutput += "(" + splice[0] + ", " + splice[1] + ")" + EOL;
             });
         }
 
         // create the output ping list (pings in the list are of the form [startLength, endLength])
         if (this.pingList.length > 0) {
-            msfOutput += "\r\n";
+            msfOutput += EOL;
             this.pingList.forEach(function (ping) {
                 if (ping[1] === undefined) {
-                    msfOutput += "(PING, " + ping[0] + ")\r\n";
+                    msfOutput += "(PING, " + ping[0] + ")" + EOL;
                 } else {
-                    msfOutput += "(PING, " + ping[0] + " - " + (ping[1] - ping[0]) + " mm)\r\n";
+                    msfOutput += "(PING, " + ping[0] + " - " + (ping[1] - ping[0]) + " mm)" + EOL;
                 }
             });
         }
         // create the output ping list (pings in the list are of the form [startLength, endLength])
         if (this.algorithmsList.length > 0) {
-            msfOutput += "\r\n";
+            msfOutput += EOL;
             this.algorithmsList.forEach(function (alg) {
                 msfOutput += "(" + alg.ingoing + "-" + alg.outgoing + ", heat="
                     + alg.heatFactor + ", compression=" + alg.compressionFactor + ", direction="
-                    + (alg.reverse ? "reverse" : "forward") + ")\r\n";
+                    + (alg.reverse ? "reverse" : "forward") + ")" + EOL;
             });
         }
 
         return msfOutput;
+    }
+};
+
+const msf2_0Functions = {
+    createMSF: function () {
+        let colorsUsed = getColorsUsedLabels1_4(this.materials);
+        let msfOutput = msfVersionToO21(2, 0);
+        // printer profile identifier
+        msfOutput += "O22 D" + this.printerProfile.getMSF2PrinterID() + EOL;
+
+        // style profile identifier
+        msfOutput += "O23 D0001" + EOL; // Chroma profiles do not have style identifiers
+
+        // adjusted PPM
+        msfOutput += "O24 D0000" + EOL; // Chroma profiles do not have adjusted PPM
+
+        // materials used
+        msfOutput += "O25";
+        for (let  drive = 0; drive < 4; drive++) {
+            const materialIndex = this.materials[drive].index;
+            msfOutput += " D";
+            msfOutput += intToHexString(materialIndex, 1);
+            if (materialIndex > 0) {
+                let color = colorInfo[this.colorsUsed[drive]].color;
+                if (color) {
+                    color = color.slice(1).toLowerCase();
+                } else {
+                    color = 'ffffff'
+                }
+                msfOutput += color;
+                msfOutput += replaceSpaces(truncate(colorsUsed[drive], MSF2_CHAR_LIMIT));
+            }
+        }
+        msfOutput += EOL;
+
+        // number of splices
+        msfOutput += "O26 D" + intToHexString(this.spliceList.length, 4) + EOL;
+
+        // number of pings
+        msfOutput += "O27 D" + intToHexString(this.pingList.length, 4) + EOL;
+
+        // number of algorithms
+        msfOutput += "O28 D" + intToHexString(this.algorithmsList.length, 4) + EOL;
+
+        // number of hot swaps (0 for now)
+        msfOutput += "O29 D0000" + EOL;
+
+        // splice data
+        for (let splice of this.spliceList) {
+            msfOutput += "O30 D" + intToHexString(splice[0], 1)
+                + " D" + floatToHexString(splice[1]) + EOL;
+        }
+
+        // ping data
+        for (let ping of this.pingList) {
+            msfOutput += "O31 D" + floatToHexString(ping[0]);
+            if (ping[1]) {
+                msfOutput += " D" + floatToHexString(ping[1]);
+            }
+            msfOutput += EOL;
+        }
+
+        // algorithm data
+        for (let alg of this.algorithmsList) {
+            msfOutput += "O32 D" + intToHexString(alg.ingoing, 1)
+                + intToHexString(alg.outgoing, 1)
+                + " D" + int16ToHexString(alg.heatFactor)
+                + " D" + int16ToHexString(alg.compressionFactor)
+                + " D" + int16ToHexString(alg.coolingFactor)
+                + EOL;
+        }
+
+        // hot swap data (nonexistent for now)
+
+        return msfOutput;
+    },
+    createPlainMSF: function () {
+        let materialsUsed = getMaterialsUsedLabels1_4(this.materials);
+        let msfOutput = "MSF2.0" + EOL + EOL;
+        // printer profile identifier
+        msfOutput += "Printer Profile:  " + this.printerProfile.profileName
+            + " (" + this.printerProfile.getMSF2PrinterID() + ")" + EOL;
+        msfOutput += "Materials Used:   " + materialsUsed[0].trim() + ", " + materialsUsed[1].trim() + ", "
+            + materialsUsed[2].trim() + ", " + materialsUsed[3].trim() + EOL;
+        msfOutput += "Splice Count:     " + this.spliceList.length + EOL;
+        msfOutput += "Ping Count:       " + this.pingList.length + EOL;
+        msfOutput += "Hot Swap Count:   " + this.hotSwapList.length + EOL;
+        msfOutput += "Algorithm Count:  " + this.algorithmsList.length + EOL;
+
+        // create the output splice list (splices in the list are of the form [drive#, lengthInMM])
+        if (this.spliceList.length > 0) {
+            msfOutput += EOL;
+            let filamentLengths = getFilamentLengthsByDrive(this.spliceList);
+            let totalLength = getTotalFilamentLength(this.spliceList);
+            msfOutput += "Filament Used" + EOL;
+            if (this.colorsUsed[0]) {
+                msfOutput += "Drive 1:          " + (filamentLengths[0] / 1000).toFixed(2) + " m" + EOL;
+            }
+            if (this.colorsUsed[1]) {
+                msfOutput += "Drive 2:          " + (filamentLengths[1] / 1000).toFixed(2) + " m" + EOL;
+            }
+            if (this.colorsUsed[2]) {
+                msfOutput += "Drive 3:          " + (filamentLengths[2] / 1000).toFixed(2) + " m" + EOL;
+            }
+            if (this.colorsUsed[3]) {
+                msfOutput += "Drive 4:          " + (filamentLengths[3] / 1000).toFixed(2) + " m" + EOL;
+            }
+            msfOutput += "Total:            " + (totalLength / 1000).toFixed(2) + " m" + EOL;
+            msfOutput += EOL;
+            this.spliceList.forEach(function (splice) {
+                msfOutput += "(" + splice[0] + ", " + splice[1] + ")" + EOL;
+            });
+        }
+
+        // create the output ping list (pings in the list are of the form [startLength, endLength])
+        if (this.pingList.length > 0) {
+            msfOutput += EOL;
+            this.pingList.forEach(function (ping) {
+                if (ping[1] === undefined) {
+                    msfOutput += "(PING, " + ping[0] + ")" + EOL;
+                } else {
+                    msfOutput += "(PING, " + ping[0] + " - " + (ping[1] - ping[0]) + " mm)" + EOL;
+                }
+            });
+        }
+        // create the output ping list (pings in the list are of the form [startLength, endLength])
+        if (this.algorithmsList.length > 0) {
+            msfOutput += EOL;
+            this.algorithmsList.forEach(function (alg) {
+                msfOutput += "(" + alg.ingoing + "-" + alg.outgoing + ", heat="
+                    + alg.heatFactor + ", compression=" + alg.compressionFactor + ", cooling="
+                    + alg.coolingFactor + ")" + EOL;
+            });
+        }
+
+        return msfOutput;
+    },
+    fromLines: function (lines) {
+        const msf = new MSF();
+        lines.forEach(function (line) {
+            const [command, ...params] = line.split(" ");
+            switch (command) {
+                case "O21":
+                    msf.version = hexStringToInt(params[0].slice(1)) / 10;
+                    break;
+                case "O25":
+                    msf.materials = params.map(function (param) {
+                        return {
+                            index: hexStringToInt(param[1]),
+                            name: param.slice(8)
+                        };
+                    });
+                    break;
+                case "O30":
+                    msf.spliceList.push([
+                        hexStringToInt(params[0].slice(1)),
+                        hexStringToFloat(params[1].slice(1))
+                    ]);
+                    break;
+                case "O31":
+                    msf.pingList.push([
+                        hexStringToFloat(params[0].slice(1)),
+                        hexStringToFloat(params[1].slice(1))
+                    ]);
+                    break;
+                case "O32":
+                    msf.algorithmsList.push({
+                        ingoing: hexStringToInt(params[0][1]),
+                        outgoing: hexStringToInt(params[0][2]),
+                        heatFactor: hexStringToInt16(params[1].slice(1)),
+                        compressionFactor: hexStringToInt16(params[2].slice(1)),
+                        coolingFactor: hexStringToInt16(params[3].slice(1))
+                    });
+                    break;
+                case "O33":
+                    // hot swap command
+                    break;
+            }
+        });
+        return msf;
     }
 };
 
@@ -510,8 +717,8 @@ class MSF {
 
     static forPrintOutput(profile, colorsUsed, materials) {
         let msf = new MSF();
-        msf.version = 1.4;
-        msf.printerProfile = profile.profileName;
+        msf.version = profile.getMSFVersion();
+        msf.printerProfile = profile;
         msf.pulsesPerMM = profile.getPulsesPerMM();
         msf.loadingOffset = profile.loadingOffset;
         msf.heatFactor = null;
@@ -521,8 +728,12 @@ class MSF {
     }
 
     static fromLines(lines) {
+        const version = parseFloat(lines[0].substring(3));
+        if (!version) {
+            return msf2_0Functions.fromLines(lines);
+        }
         let msf = new MSF();
-        msf.version = parseFloat(lines[0].substring(3));
+        msf.version = version;
 
         let spliceCount, pingCount, hotSwapCount, algorithmCount;
 
@@ -624,7 +835,12 @@ class MSF {
         return msf;
     }
 
+    clearMaterials() {
+        this.materials = [null, null, null, null];
+    }
+
     setMaterials(materials) {
+        const spliceCore = this.printerProfile.getSpliceCore();
         let msfMaterials = [null, null, null, null];
         let materialsSoFar = [];
         let algorithms = [];
@@ -650,10 +866,18 @@ class MSF {
                 if (this.colorsUsed[i] > 1) {
                     label = colorInfo[this.colorsUsed[i]].label;
                 }
+                if (this.version >= 2.0) {
+                    if (label) {
+                        label += " ";
+                    }
+                    label += MaterialMatrix.globalMatrix.matrix[spliceCore][materials[i]].type;
+                } else {
+                    label += " " + MaterialMatrix.globalMatrix.matrix[spliceCore][materials[i]].type;
+                }
                 msfMaterials[i] = {
                     index: thisMaterialNumber,
                     material: materials[i],
-                    name: label + " " + MaterialMatrix.matrix.matrix[materials[i]].type
+                    name: label
                 };
             }
         }
@@ -662,13 +886,14 @@ class MSF {
             if (material1.material !== null) {
                 for (let material2 of msfMaterials) {
                     if (material2.material !== null) {
-                        let spliceSettings = MaterialMatrix.matrix.matrix[material1.material].combinations[material2.material];
+                        let spliceSettings = MaterialMatrix.globalMatrix.matrix[spliceCore][material1.material].combinations[material2.material];
                         if (spliceSettings !== null && spliceSettingsAdded.indexOf(spliceSettings) < 0) {
                             algorithms.push({
                                 ingoing: material1.index,
                                 outgoing: material2.index,
                                 heatFactor: spliceSettings.heatFactor,
                                 compressionFactor: spliceSettings.compressionFactor,
+                                coolingFactor: spliceSettings.coolingFactor,
                                 reverse: spliceSettings.reverse
                             });
                             spliceSettingsAdded.push(spliceSettings);
@@ -718,6 +943,8 @@ class MSF {
                 return msf1_2Functions.createMSF.apply(this);
             case 1.3:
                 return msf1_3Functions.createMSF.apply(this);
+            case 2.0:
+                return msf2_0Functions.createMSF.apply(this);
             case 1.4:
             default:
                 return msf1_4Functions.createMSF.apply(this);
@@ -730,6 +957,8 @@ class MSF {
                 return msf1_2Functions.createPlainMSF.apply(this);
             case 1.3:
                 return msf1_3Functions.createPlainMSF.apply(this);
+            case 2.0:
+                return msf2_0Functions.createPlainMSF.apply(this);
             case 1.4:
             default:
                 return msf1_4Functions.createPlainMSF.apply(this);
@@ -739,6 +968,7 @@ class MSF {
 }
 
 module.exports = MSF;
+module.exports.MSF2_CHAR_LIMIT = MSF2_CHAR_LIMIT;
 module.exports.colorInfo = colorInfo;
 
 module.exports.getTotalFilamentLength = getTotalFilamentLength;
@@ -752,3 +982,6 @@ module.exports.intToHex = intToHexString;
 module.exports.floatToHex = floatToHexString;
 module.exports.hexToInt = hexStringToInt;
 module.exports.hexToFloat = hexStringToFloat;
+
+module.exports.replaceSpaces = replaceSpaces;
+module.exports.truncate = truncate;

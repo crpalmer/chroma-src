@@ -25,7 +25,6 @@ const Visualizer = require("./visualizer");
 
 const PrinterPresets = require("../models/printer-presets");
 
-const FIRST_PIECE_MIN_LENGTH = require("../models/common").FIRST_PIECE_MIN_LENGTH;
 const SPLICE_MIN_LENGTH = require("../models/common").SPLICE_MIN_LENGTH;
 
 const BOWDEN_NONE = require("../models/common").BOWDEN_NONE;
@@ -63,6 +62,7 @@ const tooltips = {
     baseProfile: "If your printer model is available in the list, most of the default settings can be used. All you need to do is calibrate your printer (under Palette)!",
     bowdenTube: "The last segment of filament that Palette produces has to be a bit longer for Bowden printers so that the last segment of filament can reach the nozzle. If you're not sure about the length of your printer's Bowden tube, overestimating is better; 1500 mm should be a safe bet in most cases.",
     calibration: "Palette needs to produce the exact required length for each filament, so that splices reach your nozzle at the correct time. However, 3D printers aren't perfectly accurate. Your print file may contain 10 m of filament extrusion instructions, but your printer might only use 9.7 m of filament. These small errors add up over a print, slowly throwing off the alignment of splices. Calibration gives Palette a baseline for the amount of error in your printer's filament consumption, and filament production is adjusted accordingly. This is especially crucial at the start of a print, before Palette's live feedback systems kick in.",
+    canvasHub: "Choose Connected mode if printing with CANVAS Hub, and Accessory mode otherwise.",
     extruderStepsPerMM: "For printers with Tiertime firmware, this is the value used as your extrusion multiplier.",
     filamentDiameter: "Palette currently only supports printing with 1.75 mm filament.",
     firmwarePurge: "Some printers include a hard-coded purge when beginning a print. Because this purge is not in the print file, calculated splice lengths will all be incorrectly short by this amount. If your printer has a firmware purge, estimate the amount of filament it uses here.",
@@ -612,42 +612,101 @@ function printerProfileModal(p, tP, onClose, startingTab = 0) {
             && document.getElementById("profileCustomize").checked;
         return [
 
-            ((guidedSetup && !profileCustomizeChecked) ? m("tr", [
-                m("th", [
-                    m("label[for='profileName']", "Profile Name")
-                ]),
-                m("td", {
-                    colspan: 2
-                }, [
-                    m("div.formError#guidedProfileNameError", [
-                        m("input.formInput#guidedProfileName", {
-                            oninput: function (event) {
-                                let el = event.target.parentElement;
-                                let value = event.target.value.trim();
-                                if (value === "") {
-                                    FormValidation.showValidationError(el, "Make sure you name the profile!");
-                                    document.getElementById("newProfilePane5Next").disabled = true;
-                                } else {
-                                    let uniqueName = true;
-                                    PrinterProfiles.getProfileList().forEach(function (printer) {
-                                        if (printer.profileName.toLowerCase() === value.toLowerCase()) {
-                                            uniqueName = false;
-                                        }
-                                    });
-                                    if (uniqueName) {
-                                        tempProfile.profileName = value;
-                                        FormValidation.resetValidationError(el);
-                                        document.getElementById("newProfilePane5Next").disabled = false;
-                                    } else {
-                                        FormValidation.showValidationError(el, "A profile with this name already exists.");
+            ((guidedSetup && !profileCustomizeChecked) ? [
+                m("tr", [
+                    m("th", [
+                        m("label[for='profileName']", "Profile Name")
+                    ]),
+                    m("td", {
+                        colspan: 2
+                    }, [
+                        m("div.formError#guidedProfileNameError", [
+                            m("input.formInput#guidedProfileName", {
+                                oninput: function (event) {
+                                    let el = event.target.parentElement;
+                                    let value = event.target.value.trim();
+                                    if (value === "") {
+                                        FormValidation.showValidationError(el, "Make sure you name the profile!");
                                         document.getElementById("newProfilePane5Next").disabled = true;
+                                    } else {
+                                        let uniqueName = true;
+                                        PrinterProfiles.getProfileList().forEach(function (printer) {
+                                            if (printer.profileName.toLowerCase() === value.toLowerCase()) {
+                                                uniqueName = false;
+                                            }
+                                        });
+                                        if (uniqueName) {
+                                            tempProfile.profileName = value;
+                                            FormValidation.resetValidationError(el);
+                                            document.getElementById("newProfilePane5Next").disabled = false;
+                                        } else {
+                                            FormValidation.showValidationError(el, "A profile with this name already exists.");
+                                            document.getElementById("newProfilePane5Next").disabled = true;
+                                        }
                                     }
                                 }
-                            }
-                        })
+                            })
+                        ])
+                    ])
+                ]),
+                m("tr", {}, [
+                    m("th", [
+                        m("label[for='paletteType']", "Palette Type")
+                    ]),
+                    m("td", {
+                        colspan: 2,
+                        style: {
+                            "padding-top": "5px"
+                        },
+                        onchange: function (event) {
+                            tempProfile.paletteType = event.target.value;
+                            document.getElementById("integratedRowX").style.display = tempProfile.isPalette2() ? null : "none";
+                        }
+                    }, [
+                        m("select.formSelect#paletteType" + (global.print ? ".formInputDisabled" : ""),
+                            Object.keys(Printer.PaletteTypes).map((type) => {
+                                return m("option", {
+                                    value: Printer.PaletteTypes[type],
+                                    selected: tempProfile.paletteType === Printer.PaletteTypes[type]
+                                }, Printer.PaletteTypes[type]);
+                            }))
+                    ])
+                ]),
+
+                m("tr#integratedRowX", {
+                    style: {
+                        display: tempProfile.isPalette2() ? null : "none"
+                    }
+                }, [
+                    m("th", [
+                        m("label.tooltip", {
+                            'data-tooltip': tooltips.canvasHub,
+                        }, "Connection")
+                    ]),
+                    m("td", [
+                        m("div.checkboxGroup", [
+                            m("input#integratedAccessoryX[type=radio]", {
+                                name: "integrated",
+                                checked: !tempProfile.integrated,
+                                onclick: function () {
+                                    tempProfile.integrated = false;
+                                }
+                            }),
+                            m("label[for='integratedAccessoryX']", "Accessory mode")
+                        ]),
+                        m("div.checkboxGroup", [
+                            m("input#integratedConnectedX[type=radio]", {
+                                name: "integrated",
+                                checked: tempProfile.integrated,
+                                onclick: function () {
+                                    tempProfile.integrated = true;
+                                }
+                            }),
+                            m("label[for='integratedConnectedX']", "Connected mode")
+                        ])
                     ])
                 ])
-            ]) : []),
+            ] : []),
 
             m("tr", [
                 m("th", {
@@ -660,25 +719,6 @@ function printerProfileModal(p, tP, onClose, startingTab = 0) {
                     }, "Filament and Extruders")
                 ])
             ]),
-
-            // m("tr", [
-            //     m("th", [
-            //         m("label.tooltip", {
-            //             "data-tooltip": tooltips.filamentDiameter
-            //         }, "Filament Diameter")
-            //     ]),
-            //     m("td", [
-            //         m("input.formInput[type='text']", {
-            //             style: {
-            //                 opacity: 1,
-            //                 "border-color": "transparent",
-            //                 "padding-left": 0
-            //             },
-            //             disabled: true,
-            //             value: "1.75 mm"
-            //         })
-            //     ])
-            // ]),
 
             m("tr", [
                 m("th", [
@@ -2754,6 +2794,63 @@ function printerProfileModal(p, tP, onClose, startingTab = 0) {
                                             ])
                                         ])
                                     ]),
+                                    m("tr", {}, [
+                                        m("th", [
+                                            m("label[for='paletteType']", "Palette Type")
+                                        ]),
+                                        m("td", {
+                                            colspan: 2,
+                                            style: {
+                                                "padding-top": "5px"
+                                            },
+                                            onchange: function (event) {
+                                                tempProfile.paletteType = event.target.value;
+                                                document.getElementById("integratedRow").style.display = tempProfile.isPalette2() ? null : "none";
+                                            }
+                                        }, [
+                                            m("select.formSelect#paletteType" + (global.print ? ".formInputDisabled" : ""),
+                                                Object.keys(Printer.PaletteTypes).map((type) => {
+                                                return m("option", {
+                                                    value: Printer.PaletteTypes[type],
+                                                    selected: tempProfile.paletteType === Printer.PaletteTypes[type]
+                                                }, Printer.PaletteTypes[type]);
+                                            }))
+                                        ])
+                                    ]),
+
+                                    m("tr#integratedRow", {
+                                        style: {
+                                            display: tempProfile.isPalette2() ? null : "none"
+                                        }
+                                    }, [
+                                        m("th", [
+                                            m("label.tooltip", {
+                                                'data-tooltip': tooltips.canvasHub,
+                                            }, "Connection")
+                                        ]),
+                                        m("td", [
+                                            m("div.checkboxGroup", [
+                                                m("input#integratedAccessory[type=radio]", {
+                                                    name: "integrated",
+                                                    checked: !tempProfile.integrated,
+                                                    onclick: function () {
+                                                        tempProfile.integrated = false;
+                                                    }
+                                                }),
+                                                m("label[for='integratedAccessory']", "Accessory mode")
+                                            ]),
+                                            m("div.checkboxGroup", [
+                                                m("input#integratedConnected[type=radio]", {
+                                                    name: "integrated",
+                                                    checked: tempProfile.integrated,
+                                                    onclick: function () {
+                                                        tempProfile.integrated = true;
+                                                    }
+                                                }),
+                                                m("label[for='integratedConnected']", "Connected mode")
+                                            ])
+                                        ])
+                                    ]),
                                     m("tr", [
                                         m("th", "Custom Settings"),
                                         m("td", {
@@ -2769,7 +2866,7 @@ function printerProfileModal(p, tP, onClose, startingTab = 0) {
                                                         "margin-top": "5px",
                                                         "margin-left": "23px"
                                                     },
-                                                }, "(i.e. print bed dimensions, nozzle size, etc.)")
+                                                }, "(print bed dimensions, nozzle size, etc.)")
                                             ])
                                         ])
                                     ])
@@ -2854,29 +2951,110 @@ function printerProfileModal(p, tP, onClose, startingTab = 0) {
                                                     document.getElementById("newProfilePane5").style.display = "block";
                                                     document.getElementById("guidedSetupProgress").style.width = "36%";
                                                 } else {
-                                                    document.getElementById("newProfilePane7").style.display = "block";
+                                                    if (tempProfile.isPalette2()) {
+                                                        document.getElementById("newProfilePane4a").style.display = "block";
+                                                        if (tempProfile.isIntegratedMSF()) {
+                                                            document.getElementById("pane4aIntegrated").style.display = "block";
+                                                            document.getElementById("pane4aNotIntegrated").style.display = "none";
+                                                        } else {
+                                                            document.getElementById("pane4aIntegrated").style.display = "none";
+                                                            document.getElementById("pane4aNotIntegrated").style.display = "block";
+                                                        }
+                                                    } else {
+                                                        document.getElementById("newProfilePane7").style.display = "block";
+                                                    }
                                                     document.getElementById("guidedSetupProgress").style.width = "54%";
                                                 }
                                             } else {
                                                 if (customize) {
                                                     printerProfileModal(undefined, tempProfile, onClose, 0);
                                                 } else {
-                                                    dialog.showMessageBox(BrowserWindow.fromId(2), {
-                                                        type: "question",
-                                                        message: "Printer-to-Palette Calibration",
-                                                        detail: "Would you like to go through the calibration process step-by-step or do you have calibration values to enter directly?",
-                                                        buttons: ["Walkthrough", "I already have values", "Cancel"],
-                                                        defaultId: 0,
-                                                        cancelId: 2
-                                                    }, function (choice) {
-                                                        if (choice === 0) {
-                                                            openCalibrationWizard(tempProfile, profile);
-                                                        } else if (choice === 1) {
-                                                            openCalibrationManualEntry(tempProfile, profile);
-                                                        }
-                                                    });
+                                                    if (tempProfile.isPalette2()) {
+                                                        document.getElementById("open-modal").scrollTop = 0;
+                                                        document.getElementById("newProfilePane4").style.display = "none";
+                                                        document.getElementById("newProfilePane13a").style.display = "block";
+                                                        document.getElementById("guidedSetupProgress").style.width = "90%";
+                                                    } else {
+                                                        dialog.showMessageBox(BrowserWindow.fromId(2), {
+                                                            type: "question",
+                                                            message: "Printer-to-Palette Calibration",
+                                                            detail: "Would you like to go through the calibration process step-by-step or do you have calibration values to enter directly?",
+                                                            buttons: ["Walkthrough", "I already have values", "Cancel"],
+                                                            defaultId: 0,
+                                                            cancelId: 2
+                                                        }, function (choice) {
+                                                            if (choice === 0) {
+                                                                openCalibrationWizard(tempProfile, profile);
+                                                            } else if (choice === 1) {
+                                                                openCalibrationManualEntry(tempProfile, profile);
+                                                            }
+                                                        });
+                                                    }
                                                 }
                                             }
+                                        }
+                                    }, "Next")
+                                ])
+                            ])
+                        ]),
+                        m("div#newProfilePane4a", {
+                            style: {
+                                display: "none"
+                            }
+                        }, [
+                            m("div#pane4aIntegrated", [
+                                m("h3", [
+                                    "Follow the Palette 2 Getting Started Guide at ",
+                                    m("a", {
+                                        href: "http://mm3d.co/gettingstarted"
+                                    }, "mm3d.co/gettingstarted"),
+                                ]),
+                                m("h3", [
+                                    "Next, follow 'Setting up CANVAS Hub' at ",
+                                    m("a", {
+                                        href: "http://mm3d.co/CHsupport"
+                                    }, "mm3d.co/CHsupport"),
+                                ]),
+                                m("p", "Continue once you have completed the steps outlined in both guides.")
+                            ]),
+                            m("div#pane4aNotIntegrated", [
+                                m("h3", [
+                                    "Follow the Palette 2 Getting Started Guide at ",
+                                    m("a", {
+                                        href: "http://mm3d.co/gettingstarted"
+                                    }, "mm3d.co/gettingstarted"),
+                                ]),
+                                m("p", "Continue once you have completed the steps outlined in the guide."),
+                            ]),
+
+                            m("div.paneButtons", [
+                                m("div.leftPane", [
+                                    m("button.formButton", {
+                                        onclick: closeProfileModal
+                                    }, "Cancel")
+                                ]),
+                                m("div.rightPane", [
+                                    m("button.formButton", {
+                                        onclick: function (event) {
+                                            event.target.blur();
+                                            let customize = document.getElementById("profileCustomize").checked;
+                                            document.getElementById("open-modal").scrollTop = 0;
+                                            document.getElementById("newProfilePane4a").style.display = "none";
+                                            if (tempProfile.baseProfile === "custom" || customize) {
+                                                document.getElementById("newProfilePane6").style.display = "block";
+                                                document.getElementById("guidedSetupProgress").style.width = "27%";
+                                            } else {
+                                                document.getElementById("newProfilePane4").style.display = "block";
+                                                document.getElementById("guidedSetupProgress").style.width = "27%";
+                                            }
+                                        }
+                                    }, "Back"),
+                                    m("button.formButton#newProfilePane4aNext", {
+                                        onclick: function () {
+                                            document.getElementById("open-modal").scrollTop = 0;
+                                            document.getElementById("newProfilePane4a").style.display = "none";
+                                            document.getElementById("newProfilePane13a").style.display = "block";
+                                            document.getElementById("guidedSetupProgress").style.width = "90%";
                                         }
                                     }, "Next")
                                 ])
@@ -2979,7 +3157,18 @@ function printerProfileModal(p, tP, onClose, startingTab = 0) {
                                             event.target.blur();
                                             document.getElementById("open-modal").scrollTop = 0;
                                             document.getElementById("newProfilePane6").style.display = "none";
-                                            document.getElementById("newProfilePane7").style.display = "block";
+                                            if (tempProfile.isPalette2()) {
+                                                document.getElementById("newProfilePane4a").style.display = "block";
+                                                if (tempProfile.isIntegratedMSF()) {
+                                                    document.getElementById("pane4aIntegrated").style.display = "block";
+                                                    document.getElementById("pane4aNotIntegrated").style.display = "none";
+                                                } else {
+                                                    document.getElementById("pane4aIntegrated").style.display = "none";
+                                                    document.getElementById("pane4aNotIntegrated").style.display = "block";
+                                                }
+                                            } else {
+                                                document.getElementById("newProfilePane7").style.display = "block";
+                                            }
                                             document.getElementById("guidedSetupProgress").style.width = "54%";
                                         }
                                     }, "Next")
@@ -3463,6 +3652,85 @@ function printerProfileModal(p, tP, onClose, startingTab = 0) {
                                     }, "Next")
                                 ])
                             ])
+                        ]),
+                        m("div#newProfilePane13a", {
+                            style: {
+                                display: "none"
+                            }
+                        }, [
+                            m("h3", "Learn how to slice for Palette 2"),
+                            m("div", [
+                                m("p", "The following guides will show you how to set up and slice your first multi-color model."),
+                                m("ul", [
+                                    m("li", [
+                                        m("a", {
+                                            href: "http://mm3d.co/simplify3d"
+                                        }, "Simplify3D"),
+                                        " (recommended)"
+                                    ]),
+                                    (tempProfile.postprocessing === "makerbot" ? [] : m("li", [
+                                        m("a", {
+                                            href: "http://mm3d.co/cura"
+                                        }, "Cura"),
+                                        " (recommended)"
+                                    ])),
+                                    m("li", [
+                                        m("a", {
+                                            href: "http://mm3d.co/slic3r"
+                                        }, "Slic3r"),
+                                        " (advanced)"
+                                    ]),
+                                    (tempProfile.postprocessing === "makerbot" ? [] : m("li", [
+                                        m("a", {
+                                            href: "http://mm3d.co/kisslicer"
+                                        }, "KISSlicer"),
+                                        " (most advanced)"
+                                    ]))
+                                ])
+                            ]),
+                            m("p", [
+                                "Need something to print? We have a collection of multi-color prints ",
+                                m("a", {
+                                    href: "http://mm3d.co/stuff-to-print"
+                                }, "here"),
+                                "."
+                            ]),
+                            m("div.paneButtons", [
+                                m("div.leftPane", [
+                                    m("button.formButton", {
+                                        onclick: closeProfileModal
+                                    }, "Cancel")
+                                ]),
+                                m("div.rightPane", [
+                                    m("button.formButton", {
+                                        onclick: function (event) {
+                                            event.target.blur();
+                                            document.getElementById("open-modal").scrollTop = 0;
+                                            document.getElementById("newProfilePane13a").style.display = "none";
+                                            if (guidedSetup) {
+                                                document.getElementById("newProfilePane4a").style.display = "block";
+                                                document.getElementById("guidedSetupProgress").style.width = "54%";
+                                            } else {
+                                                document.getElementById("newProfilePane4").style.display = "block";
+                                                document.getElementById("guidedSetupProgress").style.width = "27%";
+                                            }
+                                        }
+                                    }, "Back"),
+                                    m("button.confirm#newProfilePane13aNext", {
+                                        onclick: function (event) {
+                                            event.target.blur();
+                                            PrinterProfiles.addProfile(tempProfile);
+                                            config.saveProfile(tempProfile);
+                                            Postprocessor.updateProfileDropdown();
+                                            closeModal();
+                                            window.removeEventListener("keydown", closeProfileModal);
+                                            if (global.firstRun) {
+                                                SetupView.startTutorial();
+                                            }
+                                        }
+                                    }, "Finish")
+                                ])
+                            ])
                         ])
                     ])
 
@@ -3635,11 +3903,78 @@ function printerProfileModal(p, tP, onClose, startingTab = 0) {
                                                     style: {
                                                         "font-weight": "bold"
                                                     }
-                                                }, "Printer/Palette Calibration")
+                                                }, "General Settings")
                                             ])
                                         ]),
 
-                                        m("tr", [
+                                        m("tr", {}, [
+                                            m("th", [
+                                                m("label[for='paletteType']" + (global.print ? ".labelDisabled" : ""), "Palette Type")
+                                            ]),
+                                            m("td", {
+                                                colspan: 2,
+                                                style: {
+                                                    "padding-top": "5px"
+                                                },
+                                                onchange: function (event) {
+                                                    tempProfile.paletteType = event.target.value;
+                                                    document.getElementById("integratedRow").style.display = tempProfile.isPalette2() ? null : "none";
+                                                    document.getElementById("calibrationRow").style.display = tempProfile.isPalette2() ? "none" : null;
+                                                    document.getElementById("ppmDisplayValue").innerText = tempProfile.getPulsesPerMM().toFixed(4);
+                                                }
+                                            }, [
+                                                m("select.formSelect#paletteType" + (global.print ? ".formInputDisabled" : ""), {
+                                                    disabled: !!global.print,
+                                                }, Object.keys(Printer.PaletteTypes).map((type) => {
+                                                    return m("option", {
+                                                        value: Printer.PaletteTypes[type],
+                                                        selected: tempProfile.paletteType === Printer.PaletteTypes[type]
+                                                    }, Printer.PaletteTypes[type]);
+                                                }))
+                                            ])
+                                        ]),
+
+                                        m("tr#integratedRow", {
+                                            style: {
+                                                display: tempProfile.isPalette2() ? null : "none"
+                                            }
+                                        }, [
+                                            m("th", [
+                                                m("label.tooltip" + (global.print ? ".labelDisabled" : ""), {
+                                                    'data-tooltip': tooltips.canvasHub,
+                                                }, "Connection")
+                                            ]),
+                                            m("td", [
+                                                m("div.checkboxGroup", [
+                                                    m("input#integratedAccessory[type=radio]", {
+                                                        name: "integrated",
+                                                        disabled: !!global.print,
+                                                        checked: !tempProfile.integrated,
+                                                        onclick: function () {
+                                                            tempProfile.integrated = false;
+                                                        }
+                                                    }),
+                                                    m("label[for='integratedAccessory']" + (global.print ? ".labelDisabled" : ""), "Accessory mode")
+                                                ]),
+                                                m("div.checkboxGroup", [
+                                                    m("input#integratedConnected[type=radio]", {
+                                                        name: "integrated",
+                                                        disabled: !!global.print,
+                                                        checked: tempProfile.integrated,
+                                                        onclick: function () {
+                                                            tempProfile.integrated = true;
+                                                        }
+                                                    }),
+                                                    m("label[for='integratedConnected']" + (global.print ? ".labelDisabled" : ""), "Connected mode")
+                                                ])
+                                            ])
+                                        ]),
+
+                                        m("tr#calibrationRow", {
+                                            style: {
+                                                display: tempProfile.isPalette2() ? "none" : null
+                                            }
+                                        }, [
                                             m("th", [
                                                 "Calibration Values",
                                                 m("br"),
@@ -3686,22 +4021,14 @@ function printerProfileModal(p, tP, onClose, startingTab = 0) {
                                                         ]),
                                                         m("tr", [
                                                             m("td", "Pulses Per MM"),
-                                                            m("td.selectable", {
+                                                            m("td.selectable#ppmDisplayValue", {
                                                                 style: {
                                                                     "padding-left": "8px"
                                                                 }
                                                             }, tempProfile.getPulsesPerMM().toFixed(4))
                                                         ])
                                                     ])
-                                                ])
-                                            ])
-                                        ]),
-
-                                        m("tr", [
-                                            m("th"),
-                                            m("td", {
-                                                colspan: 2
-                                            }, [
+                                                ]),
                                                 m("div#printerCalibrationError.formError", [
                                                     m("button#printerCalibration.formButton", {
                                                         style: {
@@ -5660,7 +5987,7 @@ function openCalibrationWizard(tempProfile, editReference, closeAfter) {
                                                 msf.pulsesPerMM = 30;
                                                 msf.loadingOffset = 0;
                                                 msf.heatFactor = null;
-                                                let totalLength = FIRST_PIECE_MIN_LENGTH;
+                                                let totalLength = tempProfile.getMinFirstPieceLength();
                                                 msf.spliceList.push([0, totalLength]);
                                                 let halfPrintLength = Math.max(totalExtrusion / 2, SPLICE_MIN_LENGTH);
                                                 totalLength += halfPrintLength;
@@ -5732,7 +6059,7 @@ function openCalibrationWizard(tempProfile, editReference, closeAfter) {
                                                 }
                                                 m.render(
                                                     document.getElementById("calibrationFileTableContainer"),
-                                                    menuUtils.getOutputFileGrid(calibrationPrintFilePath, calibrationCSFFilePath, true)
+                                                    menuUtils.getOutputFileGrid(tempProfile, calibrationPrintFilePath, calibrationCSFFilePath, true)
                                                 );
                                                 document.getElementById("wizardPane2Next").disabled = false;
                                             }, 100);
@@ -6380,7 +6707,7 @@ function openCalibrationWizard(tempProfile, editReference, closeAfter) {
                             display: "none"
                         }
                     }, [
-                        m("h3", "Learn How to Slice for Palette"),
+                        m("h3", "Learn how to slice for Palette"),
                         m("div", (tempProfile.baseProfile !== "custom" && PrinterPresets.getPresetByUID(tempProfile.baseProfile).customSetupInfo
                             && PrinterPresets.getPresetByUID(tempProfile.baseProfile).customSetupInfo.slicerText) ? [
                                 m.trust(marked(PrinterPresets.getPresetByUID(tempProfile.baseProfile).customSetupInfo.slicerText))
@@ -6396,7 +6723,7 @@ function openCalibrationWizard(tempProfile, editReference, closeAfter) {
                                 (tempProfile.postprocessing === "makerbot" ? [] : m("li", [
                                     m("a", {
                                         href: "http://mm3d.co/cura"
-                                    }, "Cura 15"),
+                                    }, "Cura"),
                                     " (recommended)"
                                 ])),
                                 m("li", [
@@ -6541,7 +6868,9 @@ function validateProfile(modifications) {
         FormValidation.showValidationError(document.getElementById("extruderStepsPerMMError"));
     }
 
-    if (modifications.loadingOffset === 0 || modifications.printValue === 0 || modifications.calibrationGCodeLength === 0) {
+    if (!modifications.isPalette2()
+        && (modifications.loadingOffset === 0 || modifications.printValue === 0
+            || modifications.calibrationGCodeLength === 0)) {
         validationErrorsExist = true;
         validationErrors.paletteTab = true;
         FormValidation.showValidationError(document.getElementById("printerCalibrationError"));

@@ -71,11 +71,15 @@ function openSetupWindow() {
                         type: "question",
                         message: "Update Palette firmware",
                         detail: "Updating your Palette to the latest firmware is highly recommended.",
-                        buttons: ["No Thanks", "Update", "Cancel"],
+                        buttons: ["No Thanks", "Update", "Update Palette 2", "Cancel"],
                         defaultId: 1,
-                        cancelId: 2
+                        cancelId: 3
                     }, function (choice) {
+                        if (choice === 3) {
+                            return;
+                        }
                         if (choice === 2) {
+                            Electron.shell.openExternal("http://mm3d.co/firmware");
                             return;
                         }
                         if (choice === 1) {
@@ -83,10 +87,10 @@ function openSetupWindow() {
                             require("./firmware").openModal(function () {
                                 setTimeout(newPrinterHandler, 600);
                             });
-                        } else {
-                            closeSetupWindow();
-                            newPrinterHandler();
+                            return;
                         }
+                        closeSetupWindow();
+                        newPrinterHandler();
                     });
                 }
             }, "New Printer Profile"),
@@ -456,7 +460,7 @@ function openPrintOffboarding(print, msf, printFilePath, msfPath) {
                         }
                     }, [
                         m("h3", "Save MSF to SD card"),
-                        menuUtils.getOutputFileGrid(printFilePath, msfPath),
+                        menuUtils.getOutputFileGrid(print._printerProfile, printFilePath, msfPath),
                         m("div", {
                             style: {
                                 height: "200px"

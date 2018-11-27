@@ -116,7 +116,7 @@ async function openModal(onClose) {
                         })
                     ])
                 ]),
-                m("h2", "Update Palette Firmware"),
+                m("h2", "Update Palette/Palette+ Firmware"),
 
                 m("div.checkboxGroup#portScanMode", [
                     m("input[type='checkbox']#useAdvancedPortScan", {
@@ -268,6 +268,13 @@ async function openModal(onClose) {
                         display: (global.advancedPortScan ? "" : "none")
                     }
                 }, [
+                    m("p", [
+                        "To update Palette 2 firmware, please use the ",
+                        m("a", {
+                            href: "http://mm3d.co/firmware"
+                        }, "P2 FWUP"),
+                        "."
+                    ]),
                     m("p.firmwareWarning", [
                         m("strong", "Important:"),
                         " Ensure your Palette is disconnected from power before connecting it to your computer via USB."

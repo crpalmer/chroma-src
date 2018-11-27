@@ -1,9 +1,7 @@
 
-const path = require("path");
 const m = require("mithril");
 
 const Electron = require("electron");
-const app = Electron.remote.app;
 const BrowserWindow = Electron.remote.BrowserWindow;
 const dialog = Electron.remote.dialog;
 
@@ -18,10 +16,60 @@ const PrinterProfiles = require("../models/printer-profiles");
 const SetupView = require("./setup-view");
 
 const tooltips = {
-    heatFactor: "The amount of time spent heating filament. Each increment of 1 adds an additional second to the heating time. Note that higher heating times may require slower print speeds.",
-    compressionFactor: "The distance the two filament ends are compressed into one another. Each increment of 1 adds an additional compression of 0.6 mm to the splice.",
-    reverseSplicing: "Forward splicing heats the outgoing filament and compresses the ingoing filament into it. Reverse splicing instead heats the ingoing filament and reverses the outgoing filament back into it. Reverse splicing is useful for flexible filaments (like TPU) which can buckle under compression."
+    heatFactor: {
+        P: "The amount of time spent heating filament. Each increment of 1 adds an additional 1 second to the heating time. Note that higher heating times may require slower print speeds.",
+        SC: "The amount of time spent heating filament. Each increment of 1 adds an additional 0.5 seconds to the heating time. Note that higher heating times may require slower print speeds.",
+        SCP: "The amount of time spent heating filament. Each increment of 1 adds an additional 0.5 seconds to the heating time. Note that higher heating times may require slower print speeds."
+    },
+    compressionFactor: {
+        P: "The distance the two filament ends are compressed into one another. Each increment of 1 adds an additional compression of 0.6 mm to the splice.",
+        SC: "The distance the two filament ends are compressed into one another. Each increment of 1 adds an additional compression of 1 mm to the splice.",
+        SCP: "The distance the two filament ends are compressed into one another. Each increment of 1 adds an additional compression of 1 mm to the splice."
+    },
+    coolingFactor: {
+        SC: "The amount of time spent cooling filament. Each increment of 1 adds an additional 1 second to the cooling time. Note that higher cooling times may require slower print speeds.",
+        SCP: "The amount of time spent cooling filament. Each increment of 1 adds an additional 1 second to the cooling time. Note that higher cooling times may require slower print speeds."
+    },
+    reverseSplicing: "Forward splicing heats the outgoing filament and compresses the ingoing filament into it. Reverse splicing instead heats the ingoing filament and reverses the outgoing filament back into it. Reverse splicing is useful for flexible filaments (like TPU) which can buckle under compression.",
 };
+
+function getMinHeat(spliceCore) {
+    if (spliceCore === MaterialMatrix.spliceCores.SC) return -8;
+    if (spliceCore === MaterialMatrix.spliceCores.SCP) return -6;
+    return 0;
+}
+
+function getMaxHeat(spliceCore) {
+    if (spliceCore === MaterialMatrix.spliceCores.SC) return 8;
+    if (spliceCore === MaterialMatrix.spliceCores.SCP) return 6;
+    return 15;
+}
+
+function getMinCompression(spliceCore) {
+    if (spliceCore === MaterialMatrix.spliceCores.SC) return -10;
+    if (spliceCore === MaterialMatrix.spliceCores.SCP) return -10;
+    return 0;
+}
+
+function getMaxCompression(spliceCore) {
+    if (spliceCore === MaterialMatrix.spliceCores.SC) return 10;
+    if (spliceCore === MaterialMatrix.spliceCores.SCP) return 10;
+    return 15;
+}
+
+function getMinCooling(spliceCore) {
+    if (spliceCore === MaterialMatrix.spliceCores.SC) return -13;
+    if (spliceCore === MaterialMatrix.spliceCores.SCP) return -10;
+    return 0;
+}
+
+function getMaxCooling(spliceCore) {
+    if (spliceCore === MaterialMatrix.spliceCores.SC) return 13;
+    if (spliceCore === MaterialMatrix.spliceCores.SCP) return 16;
+    return 15;
+}
+
+let spliceCore = MaterialMatrix.spliceCores.P;
 
 function closeMainModal(event) {
     event = event || window.event;
@@ -32,10 +80,18 @@ function closeMainModal(event) {
 }
 
 function returnToMainModal() {
-    openModal();
+    openModal(spliceCore);
 }
 
-function openModal() {
+function openModal(setSpliceCore = null) {
+
+    if (setSpliceCore) {
+        spliceCore = setSpliceCore;
+    } else if (PrinterProfiles.getActiveProfile()) {
+        spliceCore = PrinterProfiles.getActiveProfile().getSpliceCore();
+    } else {
+        spliceCore = MaterialMatrix.spliceCores.P;
+    }
 
     menu.disableModalActions();
 
@@ -76,76 +132,92 @@ function openModal() {
                     ])
                 ]),
                 m("h2", "Material Profiles"),
-                m("table#materials.tableHoverHighlight", [
-                    Object.keys(MaterialMatrix.matrix.matrix).map(function (profileName) {
-                        return m("tr.hoverHighlight", [
-                            m("td.colExpand", profileName),
-                            m("td", [
-                                m("button", {
-                                    onclick: function () {
-                                        materialProfileModal(profileName, false);
-                                    }
-                                }, "Edit")
-                            ]),
-                            m("td", [
-                                m("button", {
-                                    disabled: MaterialMatrix.isDefaultProfile(profileName),
-                                    onclick: function () {
-                                        dialog.showMessageBox(BrowserWindow.fromId(2), {
-                                            type: "question",
-                                            message: "Delete Material Profile",
-                                            detail: "Are you sure you wish to delete the profile “" + profileName + "”?",
-                                            buttons: ["Cancel", "Delete"],
-                                            defaultId: 0,
-                                            cancelId: 0
-                                        }, function (choice) {
-                                            if (choice === 1) {
-                                                deleteProfile(profileName);
-                                            }
-                                        });
-                                    }
-                                }, "Delete")
+                m("table", {
+                    style: {
+                        width: "100%"
+                    }
+                },[
+                    m("tr", [
+                        m("th", "Splicing Technology"),
+                        m("td.colExpand", {
+                            style: {
+                                "padding-top": "5px"
+                            }
+                        },[
+                            m("select.formSelect", {
+                                onchange: function (event) {
+                                    spliceCore = event.target.value;
+                                    renderProfileList();
+                                }
+                            }, [
+                                Object.keys(MaterialMatrix.spliceCores).map((core) => {
+                                    return m("option", {
+                                        selected: core === spliceCore,
+                                        value: core,
+                                    }, MaterialMatrix.spliceCoreLabels[core]);
+                                })
                             ])
-                        ]);
-                    })
+                        ])
+                    ])
                 ]),
+
+                m("table#materials.tableHoverHighlight"),
                 m("button", {
                     onclick: function () {
                         let originalName = "Custom PLA";
                         let name = originalName;
                         let counter = 2;
-                        while (MaterialMatrix.matrix.profileNameTaken(name)) {
+                        while (MaterialMatrix.globalMatrix.profileNameTaken(spliceCore, name)) {
                             name = originalName + " " + counter;
                             counter++;
                         }
-                        materialProfileModal(name, true);
+                        materialProfileModal(spliceCore, name, true);
                     }
                 }, "New Profile"),
-                m("div", {
-                    style: {
-                        float: "right"
-                    }
-                }, [
-                    m("button", {
-                        style: {
-                            "margin-right": "8px"
-                        },
-                        onclick: importProfiles
-                    }, "Import"),
-                    m("button", {
-                        style: {
-                            "margin-right": "5px"
-                        },
-                        onclick: exportProfilesModal
-                    }, "Export")
-                ])
             ])
         ])
     ]);
 
+    function renderProfileList() {
+        m.render(document.getElementById("materials"),
+            Object.keys(MaterialMatrix.globalMatrix.matrix[spliceCore]).map((profileName) => {
+                return m("tr.hoverHighlight", [
+                    m("td.colExpand", profileName),
+                    m("td", [
+                        m("button", {
+                            onclick: function () {
+                                materialProfileModal(spliceCore, profileName, false);
+                            }
+                        }, "Edit")
+                    ]),
+                    m("td", [
+                        m("button", {
+                            disabled: MaterialMatrix.isDefaultProfile(spliceCore, profileName),
+                            onclick: function () {
+                                dialog.showMessageBox(BrowserWindow.fromId(2), {
+                                    type: "question",
+                                    message: "Delete Material Profile",
+                                    detail: "Are you sure you wish to delete the profile “" + profileName + "”?",
+                                    buttons: ["Cancel", "Delete"],
+                                    defaultId: 0,
+                                    cancelId: 0
+                                }, function (choice) {
+                                    if (choice === 1) {
+                                        deleteProfile(spliceCore, profileName);
+                                    }
+                                });
+                            }
+                        }, "Delete")
+                    ])
+                ]);
+            })
+        );
+    }
+    renderProfileList();
+
     modalWindow.style.display = "block";
     setTimeout(function () {
-        modalWindow.style.opacity = 1;
+        modalWindow.style.opacity = "1";
         modalWindow.style.pointerEvents = "auto";
     }, 10);
 
@@ -157,7 +229,7 @@ function closeModal() {
     if (errors) {
         m.render(errors, "");
     }
-    modalWindow.style.opacity = 0;
+    modalWindow.style.opacity = "0";
     modalWindow.style.pointerEvents = "none";
     window.removeEventListener("keydown", closeMainModal);
     setTimeout(function () {
@@ -188,159 +260,11 @@ function closeProfileModal(event) {
     }
 }
 
-function importProfiles() {
+function materialProfileModal(spliceCore, profileName, isNew, onClose) {
 
-    dialog.showOpenDialog(BrowserWindow.fromId(2), {
-        filters: [{
-            name: "YAML documents",
-            extensions: ["yml"]
-        }],
-        properties: ["openFile"]
-    }, function (filenames) {
-        if (filenames === undefined) {
-            return;
-        }
-        let importMatrix = config.importMaterials(filenames[0]);
-        let importNames = Object.keys(importMatrix.matrix);
-        let importedNames = [];
-        for (let materialName of importNames) {
-            let counterName = materialName;
-            let counter = 2;
-            let uniqueName = MaterialMatrix.matrix.addEmptyProfile(materialName);
-            while (!uniqueName) {
-                counterName = materialName + " " + counter;
-                counter++;
-                uniqueName = MaterialMatrix.matrix.addEmptyProfile(counterName);
-            }
-            importedNames.push(counterName);
-            MaterialMatrix.matrix.changeProfileType(counterName, importMatrix.matrix[materialName].type);
-        }
-        for (let i = 0; i < importNames.length; i++) {
-            for (let j = 0; j < importNames.length; j++) {
-                MaterialMatrix.matrix.matrix[importedNames[i]].combinations[importedNames[j]] = importMatrix.matrix[importNames[i]].combinations[importNames[j]];
-            }
-        }
-        dataCollection.logMaterialProfileImport(MaterialMatrix.matrix);
-        config.saveMaterials();
-        Postprocessor.updateMaterialDropdowns();
-        openModal();
-    });
-
-}
-
-function exportProfilesModal() {
-
-    function returnToMainModal(event) {
-        event = event || window.event;
-        if (event === true || event.type === "click" || event.keyCode === 27) {
-            window.removeEventListener("keydown", returnToMainModal);
-            openModal();
-        }
-    }
-
-    // pressing the ESC key will close the modal
-    window.removeEventListener("keydown", closeProfileModal);
-    window.addEventListener("keydown", returnToMainModal);
-
-    let exportCount = 0;
-    let presetExports = {};
-    for (let material of Object.keys(MaterialMatrix.matrix.matrix)) {
-        presetExports[material] = false;
-    }
-
-    let modalWindow = document.getElementById("open-modal");
-    m.render(modalWindow, []);
-    m.render(modalWindow, [
-        m("div.container", [
-            m("div.save", [
-                m("h2", "Export Material Profiles"),
-                m("span#errorText"),
-                m("br"),
-                m("p", "Material profiles work in terms of combinations of materials."),
-                m("p", "This means that if you want to export the settings used between two materials, you should export both of the materials."),
-
-                m("table", [
-                    m("tbody", [
-                        m("tr", [
-                            m("td", [
-                                Object.keys(MaterialMatrix.matrix.matrix).map(function (material, index) {
-                                    return m("div.checkboxGroup", [
-                                        m("input#materialProfile" + index + "[type='checkbox']", {
-                                            onclick: function (event) {
-                                                if (event.target.checked) {
-                                                    presetExports[material] = true;
-                                                    exportCount++;
-                                                } else {
-                                                    presetExports[material] = false;
-                                                    exportCount--;
-                                                }
-                                                document.getElementById("materialExportSave").disabled = (exportCount === 0);
-                                            }
-                                        }),
-                                        m("label[for='materialProfile" + index + "']", (material.length > 40 ? material.substr(0, 40) + "..." : material))
-                                    ])
-                                })
-                            ])
-                        ])
-                    ])
-                ]),
-                m("br"),
-
-                m("button.formButton", {
-                    onclick: returnToMainModal
-                }, "Cancel"),
-                m("button#materialExportSave.confirm", {
-                    style: {
-                        float: "right",
-                        "margin-top": "10px"
-                    },
-                    disabled: true,
-                    onclick: function (e) {
-                        if (exportCount === 0) {
-                            return;
-                        }
-                        let exportMatrix = new MaterialMatrix();
-                        for (let material in presetExports) {
-                            if (presetExports.hasOwnProperty(material) && presetExports[material]) {
-                                exportMatrix.matrix[material] = {
-                                    type: MaterialMatrix.matrix.matrix[material].type,
-                                    combinations: {}
-                                };
-                                for (let combo in presetExports) {
-                                    if (presetExports.hasOwnProperty(combo) && presetExports[combo]) {
-                                        exportMatrix.matrix[material].combinations[combo] = MaterialMatrix.matrix.matrix[material].combinations[combo];
-                                    }
-                                }
-                            }
-                        }
-                        dialog.showSaveDialog(BrowserWindow.fromId(2), {
-                            defaultPath: path.join(app.getPath("desktop"), "materials.yml"),
-                            title: "Export Material Profiles",
-                            filters: [{
-                                name: "YAML document",
-                                extensions: ["yml"]
-                            }]
-                        }, function (outpath) {
-                            if (outpath !== undefined) {
-                                config.exportMaterials(exportMatrix, outpath);
-                            }
-                        });
-
-                        returnToMainModal(true);
-                    }
-                }, "Export")
-
-            ])
-        ])
-    ]);
-
-}
-
-function materialProfileModal(profileName, isNew, onClose) {
-
-    newMatrix = MaterialMatrix.matrix.clone();
+    newMatrix = MaterialMatrix.globalMatrix.clone();
     if (isNew) {
-        newMatrix.addEmptyProfile(profileName);
+        newMatrix.addEmptyProfile(spliceCore, profileName);
     }
     originalNewMatrix = newMatrix.clone();
 
@@ -386,6 +310,26 @@ function materialProfileModal(profileName, isNew, onClose) {
                         m("tbody", [
 
                             m("tr", [
+                                m("th", "Splicing Technology"),
+                                m("td", {
+                                    style: {
+                                        width: "auto"
+                                    }
+                                }, [
+                                    m("input.formInputDisabled", {
+                                        value: MaterialMatrix.spliceCoreLabels[spliceCore],
+                                        disabled: true,
+                                        style: {
+                                            border: "none",
+                                            opacity: 1,
+                                            "text-overflow": "ellipsis",
+                                            "pointer-events": "none"
+                                        }
+                                    })
+                                ])
+                            ]),
+
+                            m("tr", [
                                 m("th", [
                                     "Material Type"
                                 ]),
@@ -397,24 +341,33 @@ function materialProfileModal(profileName, isNew, onClose) {
                                                 let name = (materialType === "Other" ? "Custom Material" : "Custom " + materialType);
                                                 let newName = name;
                                                 let counter = 2;
-                                                while (newMatrix.profileNameTaken(newName)) {
+                                                while (newMatrix.profileNameTaken(spliceCore, newName)) {
                                                     newName = name + " " + counter;
                                                     counter++;
                                                 }
-                                                newMatrix.renameProfile(profileName, newName);
+                                                newMatrix.renameProfile(spliceCore, profileName, newName);
                                                 document.getElementById("materialName").value = newName;
                                                 profileName = newName;
                                             }
                                         }, [
-                                            MaterialMatrix.materialTypes.map(function (type) {
-                                                return m("option", {
-                                                    selected: newMatrix.matrix[profileName].type === type
-                                                }, type)
+                                            Object.keys(MaterialMatrix.materialTypes).map((group) => {
+                                                if (group === 'other') {
+                                                    return m("option", {
+                                                        selected: newMatrix.matrix[spliceCore][profileName].type === 'Other'
+                                                    }, 'Other')
+                                                }
+                                                return m("optgroup", {
+                                                    label: group
+                                                }, MaterialMatrix.materialTypes[group].map((type) => {
+                                                    return m("option", {
+                                                        selected: newMatrix.matrix[spliceCore][profileName].type === type
+                                                    }, type)
+                                                }));
                                             })
                                         ])
                                     ] : [
                                         m("input#materialType.formInput.formInputDisabled", {
-                                            value: newMatrix.matrix[profileName].type,
+                                            value: newMatrix.matrix[spliceCore][profileName].type,
                                             disabled: true,
                                             style: {
                                                 border: "none",
@@ -435,9 +388,9 @@ function materialProfileModal(profileName, isNew, onClose) {
                                     }
                                 }, [
                                     m("div#materialNameError.formError", [
-                                        m("input#materialName.formInput" + (MaterialMatrix.isDefaultProfile(profileName) ? ".formInputDisabled" : ""), {
+                                        m("input#materialName.formInput" + (MaterialMatrix.isDefaultProfile(spliceCore, profileName) ? ".formInputDisabled" : ""), {
                                             value: profileName,
-                                            disabled: MaterialMatrix.isDefaultProfile(profileName),
+                                            disabled: MaterialMatrix.isDefaultProfile(spliceCore, profileName),
                                             oninput: function (event) {
                                                 let el = event.target.parentElement;
                                                 let value = event.target.value.trim();
@@ -447,13 +400,13 @@ function materialProfileModal(profileName, isNew, onClose) {
                                                     FormValidation.showValidationError(el, "Make sure you name the profile!");
                                                 } else if (value !== profileName) {
                                                     let uniqueName = true;
-                                                    Object.keys(newMatrix.matrix).forEach(function (material) {
+                                                    Object.keys(newMatrix.matrix[spliceCore]).forEach(function (material) {
                                                         if (material.toLowerCase() === value.toLowerCase() && material !== profileName) {
                                                             uniqueName = false;
                                                         }
                                                     });
                                                     if (uniqueName) {
-                                                        newMatrix.renameProfile(profileName, value);
+                                                        newMatrix.renameProfile(spliceCore, profileName, value);
                                                         profileName = value;
                                                         FormValidation.resetValidationError(el);
                                                         document.getElementById("saveProfileButton").disabled = false;
@@ -492,7 +445,7 @@ function materialProfileModal(profileName, isNew, onClose) {
                             onclick: function (event) {
                                 event.target.blur();
                                 if (isNew) {
-                                    newMatrix.changeProfileType(profileName, materialType);
+                                    newMatrix.changeProfileType(spliceCore, profileName, materialType);
                                     originalNewMatrix = newMatrix.clone();
                                     materialFinalized = true;
                                 }
@@ -505,8 +458,8 @@ function materialProfileModal(profileName, isNew, onClose) {
                             },
                             onclick: function (event) {
                                 event.target.blur();
-                                newMatrix.changeProfileType(profileName, materialType);
-                                validateAndSaveChanges(newMatrix, isNew);
+                                newMatrix.changeProfileType(spliceCore, profileName, materialType);
+                                validateAndSaveChanges(spliceCore, newMatrix, isNew);
                             }
                         }, (isNew? "Create" : "Save"))
                     ])
@@ -530,6 +483,26 @@ function materialProfileModal(profileName, isNew, onClose) {
                         }
                     }, [
                         m("tbody", [
+
+                            m("tr", [
+                                m("th", "Splicing Technology"),
+                                m("td", {
+                                    style: {
+                                        width: "auto"
+                                    }
+                                }, [
+                                    m("input.formInputDisabled", {
+                                        value: MaterialMatrix.spliceCoreLabels[spliceCore],
+                                        disabled: true,
+                                        style: {
+                                            border: "none",
+                                            opacity: 1,
+                                            "text-overflow": "ellipsis",
+                                            "pointer-events": "none"
+                                        }
+                                    })
+                                ])
+                            ]),
 
                             m("tr", [
                                 m("th", [
@@ -564,8 +537,8 @@ function materialProfileModal(profileName, isNew, onClose) {
                                             renderSpliceSettingsTable(profileName, material);
                                         }
                                     }, [
-                                        Object.keys(newMatrix.matrix).filter(function (material) {
-                                            return newMatrix.matrix[profileName].combinations[material] !== null;
+                                        Object.keys(newMatrix.matrix[spliceCore]).filter(function (material) {
+                                            return newMatrix.matrix[spliceCore][profileName].combinations[material] !== null;
                                         }).map(function (material) {
                                             return m("option", {
                                                 selected: material === profileName,
@@ -591,7 +564,7 @@ function materialProfileModal(profileName, isNew, onClose) {
                             float: "right"
                         }
                     }, [
-                        (MaterialMatrix.isDefaultProfile(profileName) ? [] : [
+                        (MaterialMatrix.isDefaultProfile(spliceCore, profileName) ? [] : [
                             m("button", {
                                 style: {
                                     "margin-right": "10px"
@@ -608,7 +581,7 @@ function materialProfileModal(profileName, isNew, onClose) {
                             },
                             onclick: function (event) {
                                 event.target.blur();
-                                validateAndSaveChanges(newMatrix, isNew);
+                                validateAndSaveChanges(spliceCore, newMatrix, isNew);
                             }
                         }, (isNew? "Create" : "Save"))
                     ])
@@ -616,11 +589,11 @@ function materialProfileModal(profileName, isNew, onClose) {
                 ])
             ])
         ]);
-        if (newMatrix.matrix[profileName].combinations[profileName] !== null) {
+        if (newMatrix.matrix[spliceCore][profileName].combinations[profileName] !== null) {
             renderSpliceSettingsTable(profileName, profileName);
         } else {
-            for (let combo of Object.keys(newMatrix.matrix[profileName].combinations)) {
-                if (newMatrix.matrix[profileName].combinations[combo] !== null) {
+            for (let combo of Object.keys(newMatrix.matrix[spliceCore][profileName].combinations)) {
+                if (newMatrix.matrix[spliceCore][profileName].combinations[combo] !== null) {
                     renderSpliceSettingsTable(profileName, combo);
                     break;
                 }
@@ -629,10 +602,16 @@ function materialProfileModal(profileName, isNew, onClose) {
     }
 
     function renderSpliceSettingsTable(profileIngoing, profileOutgoing) {
-        let defaultsButtons = newMatrix.matrix[profileIngoing].type !== "Other" && newMatrix.matrix[profileOutgoing].type !== "Other";
-        let allowZero = !(profileIngoing === "Default PLA" && profileOutgoing === "Default PLA");
+        let defaultsButtons = newMatrix.matrix[spliceCore][profileIngoing].type !== "Other" && newMatrix.matrix[spliceCore][profileOutgoing].type !== "Other";
+        let allowZero = !(profileIngoing === "Default PLA" && profileOutgoing === "Default PLA") || (spliceCore !== MaterialMatrix.spliceCores.P);
         let profileIngoingDisplayName = (profileIngoing.length > 32 ? profileIngoing.substr(0, 30) + "…" : profileIngoing);
         let profileOutgoingDisplayName = (profileOutgoing.length > 32 ? profileOutgoing.substr(0, 30) + "…" : profileOutgoing);
+        let heatingMin = getMinHeat(spliceCore);
+        let heatingMax = getMaxHeat(spliceCore);
+        let compressionMin = getMinCompression(spliceCore);
+        let compressionMax = getMaxCompression(spliceCore);
+        let coolingMin = getMinCooling(spliceCore);
+        let coolingMax = getMaxCooling(spliceCore);
         m.render(document.getElementById("spliceSettings"), [
             m("tr", [
                 m("th", {
@@ -648,16 +627,16 @@ function materialProfileModal(profileName, isNew, onClose) {
             m("tr", [
                 m("th", [
                     m("label.tooltip[for='heatFactor1']", {
-                        "data-tooltip": tooltips.heatFactor
+                        "data-tooltip": tooltips.heatFactor[spliceCore]
                     }, "Heat Factor"),
                     (defaultsButtons ? m("button.useMaterialDefault#heatFactor1Default", {
                         style: {
-                            display: (!MaterialMatrix.defaults[newMatrix.matrix[profileIngoing].type][newMatrix.matrix[profileOutgoing].type]
-                                || newMatrix.matrix[profileIngoing].combinations[profileOutgoing].heatFactor === MaterialMatrix.defaults[newMatrix.matrix[profileIngoing].type][newMatrix.matrix[profileOutgoing].type].heatFactor) ? "none" : ""
+                            display: (!MaterialMatrix.defaults[spliceCore][newMatrix.matrix[spliceCore][profileIngoing].type][newMatrix.matrix[spliceCore][profileOutgoing].type]
+                                || newMatrix.matrix[spliceCore][profileIngoing].combinations[profileOutgoing].heatFactor === MaterialMatrix.defaults[spliceCore][newMatrix.matrix[spliceCore][profileIngoing].type][newMatrix.matrix[spliceCore][profileOutgoing].type].heatFactor) ? "none" : ""
                         },
                         onclick: function (event) {
-                            let defaultHeatFactor = MaterialMatrix.defaults[newMatrix.matrix[profileIngoing].type][newMatrix.matrix[profileOutgoing].type].heatFactor;
-                            newMatrix.matrix[profileIngoing].combinations[profileOutgoing].heatFactor = defaultHeatFactor;
+                            let defaultHeatFactor = MaterialMatrix.defaults[spliceCore][newMatrix.matrix[spliceCore][profileIngoing].type][newMatrix.matrix[spliceCore][profileOutgoing].type].heatFactor;
+                            newMatrix.matrix[spliceCore][profileIngoing].combinations[profileOutgoing].heatFactor = defaultHeatFactor;
                             document.getElementById("heatFactor1").value = defaultHeatFactor;
                             event.target.style.display = "none";
                         }
@@ -666,19 +645,30 @@ function materialProfileModal(profileName, isNew, onClose) {
                 m("td", [
                     m("div.formError", [
                         m("input#heatFactor1.formInput", {
-                            value: newMatrix.matrix[profileIngoing].combinations[profileOutgoing].heatFactor || "0",
+                            value: newMatrix.matrix[spliceCore][profileIngoing].combinations[profileOutgoing].heatFactor || "0",
                             oninput: function (event) {
-                                newMatrix.matrix[profileIngoing].combinations[profileOutgoing].heatFactor = FormValidation.validateNumberInput(
-                                    event.target.value,
-                                    0,
-                                    0, allowZero,
-                                    15, true,
-                                    true,
-                                    event.target.parentElement,
-                                    "Splice heat factor");
-                                if (defaultsButtons && MaterialMatrix.defaults[newMatrix.matrix[profileIngoing].type][newMatrix.matrix[profileOutgoing].type]) {
-                                    let defaultHeatFactor = MaterialMatrix.defaults[newMatrix.matrix[profileIngoing].type][newMatrix.matrix[profileOutgoing].type].heatFactor;
-                                    document.getElementById("heatFactor1Default").style.display = (newMatrix.matrix[profileIngoing].combinations[profileOutgoing].heatFactor === defaultHeatFactor) ? "none" : "";
+                                if (spliceCore === MaterialMatrix.spliceCores.P) {
+                                    newMatrix.matrix[spliceCore][profileIngoing].combinations[profileOutgoing].heatFactor = FormValidation.validateNumberInput(
+                                        event.target.value,
+                                        0,
+                                        heatingMin, allowZero,
+                                        heatingMax, true,
+                                        true,
+                                        event.target.parentElement,
+                                        "Splice heat factor");
+                                } else {
+                                    newMatrix.matrix[spliceCore][profileIngoing].combinations[profileOutgoing].heatFactor = FormValidation.validateIntegerInput(
+                                        event.target.value,
+                                        0,
+                                        heatingMin, allowZero,
+                                        heatingMax, true,
+                                        true,
+                                        event.target.parentElement,
+                                        "Splice heat factor");
+                                }
+                                if (defaultsButtons && MaterialMatrix.defaults[spliceCore][newMatrix.matrix[spliceCore][profileIngoing].type][newMatrix.matrix[spliceCore][profileOutgoing].type]) {
+                                    let defaultHeatFactor = MaterialMatrix.defaults[spliceCore][newMatrix.matrix[spliceCore][profileIngoing].type][newMatrix.matrix[spliceCore][profileOutgoing].type].heatFactor;
+                                    document.getElementById("heatFactor1Default").style.display = (newMatrix.matrix[spliceCore][profileIngoing].combinations[profileOutgoing].heatFactor === defaultHeatFactor) ? "none" : "";
                                 }
                             }
                         })
@@ -688,16 +678,16 @@ function materialProfileModal(profileName, isNew, onClose) {
             m("tr", [
                 m("th", [
                     m("label.tooltip[for='compressionFactor1']", {
-                        "data-tooltip": tooltips.compressionFactor
+                        "data-tooltip": tooltips.compressionFactor[spliceCore]
                     }, "Compression Factor"),
                     (defaultsButtons ? m("button.useMaterialDefault#compressionFactor1Default", {
                         style: {
-                            display: (!MaterialMatrix.defaults[newMatrix.matrix[profileIngoing].type][newMatrix.matrix[profileOutgoing].type]
-                                || newMatrix.matrix[profileIngoing].combinations[profileOutgoing].compressionFactor === MaterialMatrix.defaults[newMatrix.matrix[profileIngoing].type][newMatrix.matrix[profileOutgoing].type].compressionFactor) ? "none" : ""
+                            display: (!MaterialMatrix.defaults[spliceCore][newMatrix.matrix[spliceCore][profileIngoing].type][newMatrix.matrix[spliceCore][profileOutgoing].type]
+                                || newMatrix.matrix[spliceCore][profileIngoing].combinations[profileOutgoing].compressionFactor === MaterialMatrix.defaults[spliceCore][newMatrix.matrix[spliceCore][profileIngoing].type][newMatrix.matrix[spliceCore][profileOutgoing].type].compressionFactor) ? "none" : ""
                         },
                         onclick: function (event) {
-                            let defaultCompressionFactor = MaterialMatrix.defaults[newMatrix.matrix[profileIngoing].type][newMatrix.matrix[profileOutgoing].type].compressionFactor;
-                            newMatrix.matrix[profileIngoing].combinations[profileOutgoing].compressionFactor = defaultCompressionFactor;
+                            let defaultCompressionFactor = MaterialMatrix.defaults[spliceCore][newMatrix.matrix[spliceCore][profileIngoing].type][newMatrix.matrix[spliceCore][profileOutgoing].type].compressionFactor;
+                            newMatrix.matrix[spliceCore][profileIngoing].combinations[profileOutgoing].compressionFactor = defaultCompressionFactor;
                             document.getElementById("compressionFactor1").value = defaultCompressionFactor;
                             event.target.style.display = "none";
                         }
@@ -706,60 +696,114 @@ function materialProfileModal(profileName, isNew, onClose) {
                 m("td", [
                     m("div.formError", [
                         m("input#compressionFactor1.formInput", {
-                            value: newMatrix.matrix[profileIngoing].combinations[profileOutgoing].compressionFactor || "0",
+                            value: newMatrix.matrix[spliceCore][profileIngoing].combinations[profileOutgoing].compressionFactor || "0",
                             oninput: function (event) {
-                                newMatrix.matrix[profileIngoing].combinations[profileOutgoing].compressionFactor = FormValidation.validateNumberInput(
-                                    event.target.value,
-                                    0,
-                                    0, allowZero,
-                                    15, true,
-                                    true,
-                                    event.target.parentElement,
-                                    "Splice compression factor");
-                                if (defaultsButtons && MaterialMatrix.defaults[newMatrix.matrix[profileIngoing].type][newMatrix.matrix[profileOutgoing].type]) {
-                                    let defaultCompressionFactor = MaterialMatrix.defaults[newMatrix.matrix[profileIngoing].type][newMatrix.matrix[profileOutgoing].type].compressionFactor;
-                                    document.getElementById("compressionFactor1Default").style.display = (newMatrix.matrix[profileIngoing].combinations[profileOutgoing].compressionFactor === defaultCompressionFactor) ? "none" : "";
+                                if (spliceCore === MaterialMatrix.spliceCores.P) {
+                                    newMatrix.matrix[spliceCore][profileIngoing].combinations[profileOutgoing].compressionFactor = FormValidation.validateNumberInput(
+                                        event.target.value,
+                                        0,
+                                        compressionMin, allowZero,
+                                        compressionMax, true,
+                                        true,
+                                        event.target.parentElement,
+                                        "Splice compression factor");
+                                } else {
+                                    newMatrix.matrix[spliceCore][profileIngoing].combinations[profileOutgoing].compressionFactor = FormValidation.validateIntegerInput(
+                                        event.target.value,
+                                        0,
+                                        compressionMin, allowZero,
+                                        compressionMax, true,
+                                        true,
+                                        event.target.parentElement,
+                                        "Splice compression factor");
+                                }
+                                if (defaultsButtons && MaterialMatrix.defaults[spliceCore][newMatrix.matrix[spliceCore][profileIngoing].type][newMatrix.matrix[spliceCore][profileOutgoing].type]) {
+                                    let defaultCompressionFactor = MaterialMatrix.defaults[spliceCore][newMatrix.matrix[spliceCore][profileIngoing].type][newMatrix.matrix[spliceCore][profileOutgoing].type].compressionFactor;
+                                    document.getElementById("compressionFactor1Default").style.display = (newMatrix.matrix[spliceCore][profileIngoing].combinations[profileOutgoing].compressionFactor === defaultCompressionFactor) ? "none" : "";
                                 }
                             }
                         })
                     ])
                 ])
             ]),
-            m("tr", [
-                m("th", [
-                    m("span.tooltip", {
-                        "data-tooltip": tooltips.reverseSplicing
-                    }, "Reverse Splicing"),
-                    (defaultsButtons ? m("button.useMaterialDefault#reverse1Default", {
-                        style: {
-                            display: (!MaterialMatrix.defaults[newMatrix.matrix[profileIngoing].type][newMatrix.matrix[profileOutgoing].type]
-                                || newMatrix.matrix[profileIngoing].combinations[profileOutgoing].reverse === MaterialMatrix.defaults[newMatrix.matrix[profileIngoing].type][newMatrix.matrix[profileOutgoing].type].reverse) ? "none" : ""
-                        },
-                        onclick: function (event) {
-                            let defaultReverse = MaterialMatrix.defaults[newMatrix.matrix[profileIngoing].type][newMatrix.matrix[profileOutgoing].type].reverse;
-                            newMatrix.matrix[profileIngoing].combinations[profileOutgoing].reverse = defaultReverse;
-                            document.getElementById("reverse1").checked = defaultReverse;
-                            event.target.style.display = "none";
-                        }
-                    }) : [])
-                ]),
-                m("td", [
-                    m("div.formError", [
-                        m("div.checkboxGroup", [
-                            m("input#reverse1[type='checkbox']", {
-                                checked: newMatrix.matrix[profileIngoing].combinations[profileOutgoing].reverse,
-                                onclick: function (event) {
-                                    newMatrix.matrix[profileIngoing].combinations[profileOutgoing].reverse = event.target.checked;
-                                    if (defaultsButtons && MaterialMatrix.defaults[newMatrix.matrix[profileIngoing].type][newMatrix.matrix[profileOutgoing].type]) {
-                                        let defaultReverse = MaterialMatrix.defaults[newMatrix.matrix[profileIngoing].type][newMatrix.matrix[profileOutgoing].type].reverse;
-                                        document.getElementById("reverse1Default").style.display = (newMatrix.matrix[profileIngoing].combinations[profileOutgoing].reverse === defaultReverse) ? "none" : "";
+            (spliceCore === MaterialMatrix.spliceCores.P ? [
+                m("tr", [
+                    m("th", [
+                        m("span.tooltip", {
+                            "data-tooltip": tooltips.reverseSplicing
+                        }, "Reverse Splicing"),
+                        (defaultsButtons ? m("button.useMaterialDefault#reverse1Default", {
+                            style: {
+                                display: (!MaterialMatrix.defaults[spliceCore][newMatrix.matrix[spliceCore][profileIngoing].type][newMatrix.matrix[spliceCore][profileOutgoing].type]
+                                    || newMatrix.matrix[spliceCore][profileIngoing].combinations[profileOutgoing].reverse === MaterialMatrix.defaults[spliceCore][newMatrix.matrix[spliceCore][profileIngoing].type][newMatrix.matrix[spliceCore][profileOutgoing].type].reverse) ? "none" : ""
+                            },
+                            onclick: function (event) {
+                                let defaultReverse = MaterialMatrix.defaults[spliceCore][newMatrix.matrix[spliceCore][profileIngoing].type][newMatrix.matrix[spliceCore][profileOutgoing].type].reverse;
+                                newMatrix.matrix[spliceCore][profileIngoing].combinations[profileOutgoing].reverse = defaultReverse;
+                                document.getElementById("reverse1").checked = defaultReverse;
+                                event.target.style.display = "none";
+                            }
+                        }) : [])
+                    ]),
+                    m("td", [
+                        m("div.formError", [
+                            m("div.checkboxGroup", [
+                                m("input#reverse1[type='checkbox']", {
+                                    checked: newMatrix.matrix[spliceCore][profileIngoing].combinations[profileOutgoing].reverse,
+                                    onclick: function (event) {
+                                        newMatrix.matrix[spliceCore][profileIngoing].combinations[profileOutgoing].reverse = event.target.checked;
+                                        if (defaultsButtons && MaterialMatrix.defaults[spliceCore][newMatrix.matrix[spliceCore][profileIngoing].type][newMatrix.matrix[spliceCore][profileOutgoing].type]) {
+                                            let defaultReverse = MaterialMatrix.defaults[spliceCore][newMatrix.matrix[spliceCore][profileIngoing].type][newMatrix.matrix[spliceCore][profileOutgoing].type].reverse;
+                                            document.getElementById("reverse1Default").style.display = (newMatrix.matrix[spliceCore][profileIngoing].combinations[profileOutgoing].reverse === defaultReverse) ? "none" : "";
+                                        }
                                     }
-                                }
-                            }),
-                            m("label[for='reverse1']", "Use reverse splicing")
+                                }),
+                                m("label[for='reverse1']", "Use reverse splicing")
+                            ])
                         ])
                     ])
                 ])
+            ] : [
+                m("tr", [
+                    m("th", [
+                        m("label.tooltip[for='coolingFactor1']", {
+                            "data-tooltip": tooltips.coolingFactor[spliceCore]
+                        }, "Cooling Factor"),
+                        (defaultsButtons ? m("button.useMaterialDefault#coolingFactor1Default", {
+                            style: {
+                                display: (!MaterialMatrix.defaults[spliceCore][newMatrix.matrix[spliceCore][profileIngoing].type][newMatrix.matrix[spliceCore][profileOutgoing].type]
+                                    || newMatrix.matrix[spliceCore][profileIngoing].combinations[profileOutgoing].coolingFactor === MaterialMatrix.defaults[spliceCore][newMatrix.matrix[spliceCore][profileIngoing].type][newMatrix.matrix[spliceCore][profileOutgoing].type].coolingFactor) ? "none" : ""
+                            },
+                            onclick: function (event) {
+                                let defaultCoolingFactor = MaterialMatrix.defaults[spliceCore][newMatrix.matrix[spliceCore][profileIngoing].type][newMatrix.matrix[spliceCore][profileOutgoing].type].coolingFactor;
+                                newMatrix.matrix[spliceCore][profileIngoing].combinations[profileOutgoing].coolingFactor = defaultCoolingFactor;
+                                document.getElementById("coolingFactor1").value = defaultCoolingFactor;
+                                event.target.style.display = "none";
+                            }
+                        }) : [])
+                    ]),
+                    m("td", [
+                        m("div.formError", [
+                            m("input#coolingFactor1.formInput", {
+                                value: newMatrix.matrix[spliceCore][profileIngoing].combinations[profileOutgoing].coolingFactor || "0",
+                                oninput: function (event) {
+                                    newMatrix.matrix[spliceCore][profileIngoing].combinations[profileOutgoing].coolingFactor = FormValidation.validateIntegerInput(
+                                        event.target.value,
+                                        0,
+                                        coolingMin, allowZero,
+                                        coolingMax, true,
+                                        true,
+                                        event.target.parentElement,
+                                        "Splice cooling factor");
+                                    if (defaultsButtons && MaterialMatrix.defaults[spliceCore][newMatrix.matrix[spliceCore][profileIngoing].type][newMatrix.matrix[spliceCore][profileOutgoing].type]) {
+                                        let defaultCoolingFactor = MaterialMatrix.defaults[spliceCore][newMatrix.matrix[spliceCore][profileIngoing].type][newMatrix.matrix[spliceCore][profileOutgoing].type].coolingFactor;
+                                        document.getElementById("coolingFactor1Default").style.display = (newMatrix.matrix[spliceCore][profileIngoing].combinations[profileOutgoing].coolingFactor === defaultCoolingFactor) ? "none" : "";
+                                    }
+                                }
+                            })
+                        ])
+                    ])
+                ]),
             ]),
             (profileIngoing === profileOutgoing ? [] : [
                 m("tr", [
@@ -772,16 +816,16 @@ function materialProfileModal(profileName, isNew, onClose) {
                 m("tr", [
                     m("th", [
                         m("label.tooltip[for='heatFactor2']", {
-                            "data-tooltip": tooltips.heatFactor
+                            "data-tooltip": tooltips.heatFactor[spliceCore]
                         }, "Heat Factor"),
                         (defaultsButtons ? m("button.useMaterialDefault#heatFactor2Default", {
                             style: {
-                                display: (!MaterialMatrix.defaults[newMatrix.matrix[profileOutgoing].type][newMatrix.matrix[profileIngoing].type]
-                                    || newMatrix.matrix[profileOutgoing].combinations[profileIngoing].heatFactor === MaterialMatrix.defaults[newMatrix.matrix[profileOutgoing].type][newMatrix.matrix[profileIngoing].type].heatFactor) ? "none" : ""
+                                display: (!MaterialMatrix.defaults[spliceCore][newMatrix.matrix[spliceCore][profileOutgoing].type][newMatrix.matrix[spliceCore][profileIngoing].type]
+                                    || newMatrix.matrix[spliceCore][profileOutgoing].combinations[profileIngoing].heatFactor === MaterialMatrix.defaults[spliceCore][newMatrix.matrix[spliceCore][profileOutgoing].type][newMatrix.matrix[spliceCore][profileIngoing].type].heatFactor) ? "none" : ""
                             },
                             onclick: function (event) {
-                                let defaultHeatFactor = MaterialMatrix.defaults[newMatrix.matrix[profileOutgoing].type][newMatrix.matrix[profileIngoing].type].heatFactor;
-                                newMatrix.matrix[profileOutgoing].combinations[profileIngoing].heatFactor = defaultHeatFactor;
+                                let defaultHeatFactor = MaterialMatrix.defaults[spliceCore][newMatrix.matrix[spliceCore][profileOutgoing].type][newMatrix.matrix[spliceCore][profileIngoing].type].heatFactor;
+                                newMatrix.matrix[spliceCore][profileOutgoing].combinations[profileIngoing].heatFactor = defaultHeatFactor;
                                 document.getElementById("heatFactor2").value = defaultHeatFactor;
                                 event.target.style.display = "none";
                             }
@@ -790,19 +834,30 @@ function materialProfileModal(profileName, isNew, onClose) {
                     m("td", [
                         m("div.formError", [
                             m("input#heatFactor2.formInput", {
-                                value: newMatrix.matrix[profileOutgoing].combinations[profileIngoing].heatFactor || "0",
+                                value: newMatrix.matrix[spliceCore][profileOutgoing].combinations[profileIngoing].heatFactor || "0",
                                 oninput: function (event) {
-                                    newMatrix.matrix[profileOutgoing].combinations[profileIngoing].heatFactor = FormValidation.validateNumberInput(
-                                        event.target.value,
-                                        0,
-                                        0, allowZero,
-                                        15, true,
-                                        true,
-                                        event.target.parentElement,
-                                        "Splice heat factor");
-                                    if (defaultsButtons && MaterialMatrix.defaults[newMatrix.matrix[profileOutgoing].type][newMatrix.matrix[profileIngoing].type]) {
-                                        let defaultHeatFactor = MaterialMatrix.defaults[newMatrix.matrix[profileOutgoing].type][newMatrix.matrix[profileIngoing].type].heatFactor;
-                                        document.getElementById("heatFactor2Default").style.display = (newMatrix.matrix[profileOutgoing].combinations[profileIngoing].heatFactor === defaultHeatFactor) ? "none" : "";
+                                    if (spliceCore === MaterialMatrix.spliceCores.P) {
+                                        newMatrix.matrix[spliceCore][profileOutgoing].combinations[profileIngoing].heatFactor = FormValidation.validateNumberInput(
+                                            event.target.value,
+                                            0,
+                                            heatingMin, allowZero,
+                                            heatingMax, true,
+                                            true,
+                                            event.target.parentElement,
+                                            "Splice heat factor");
+                                    } else {
+                                        newMatrix.matrix[spliceCore][profileOutgoing].combinations[profileIngoing].heatFactor = FormValidation.validateIntegerInput(
+                                            event.target.value,
+                                            0,
+                                            heatingMin, allowZero,
+                                            heatingMax, true,
+                                            true,
+                                            event.target.parentElement,
+                                            "Splice heat factor");
+                                    }
+                                    if (defaultsButtons && MaterialMatrix.defaults[spliceCore][newMatrix.matrix[spliceCore][profileOutgoing].type][newMatrix.matrix[spliceCore][profileIngoing].type]) {
+                                        let defaultHeatFactor = MaterialMatrix.defaults[spliceCore][newMatrix.matrix[spliceCore][profileOutgoing].type][newMatrix.matrix[spliceCore][profileIngoing].type].heatFactor;
+                                        document.getElementById("heatFactor2Default").style.display = (newMatrix.matrix[spliceCore][profileOutgoing].combinations[profileIngoing].heatFactor === defaultHeatFactor) ? "none" : "";
                                     }
                                 }
                             })
@@ -812,16 +867,16 @@ function materialProfileModal(profileName, isNew, onClose) {
                 m("tr", [
                     m("th", [
                         m("label.tooltip[for='compressionFactor2']", {
-                            "data-tooltip": tooltips.compressionFactor
+                            "data-tooltip": tooltips.compressionFactor[spliceCore]
                         }, "Compression Factor"),
                         (defaultsButtons ? m("button.useMaterialDefault#compressionFactor2Default", {
                             style: {
-                                display: (!MaterialMatrix.defaults[newMatrix.matrix[profileOutgoing].type][newMatrix.matrix[profileIngoing].type]
-                                    || newMatrix.matrix[profileOutgoing].combinations[profileIngoing].compressionFactor === MaterialMatrix.defaults[newMatrix.matrix[profileOutgoing].type][newMatrix.matrix[profileIngoing].type].compressionFactor) ? "none" : ""
+                                display: (!MaterialMatrix.defaults[spliceCore][newMatrix.matrix[spliceCore][profileOutgoing].type][newMatrix.matrix[spliceCore][profileIngoing].type]
+                                    || newMatrix.matrix[spliceCore][profileOutgoing].combinations[profileIngoing].compressionFactor === MaterialMatrix.defaults[spliceCore][newMatrix.matrix[spliceCore][profileOutgoing].type][newMatrix.matrix[spliceCore][profileIngoing].type].compressionFactor) ? "none" : ""
                             },
                             onclick: function (event) {
-                                let defaultCompressionFactor = MaterialMatrix.defaults[newMatrix.matrix[profileOutgoing].type][newMatrix.matrix[profileIngoing].type].compressionFactor;
-                                newMatrix.matrix[profileOutgoing].combinations[profileIngoing].compressionFactor = defaultCompressionFactor;
+                                let defaultCompressionFactor = MaterialMatrix.defaults[spliceCore][newMatrix.matrix[spliceCore][profileOutgoing].type][newMatrix.matrix[spliceCore][profileIngoing].type].compressionFactor;
+                                newMatrix.matrix[spliceCore][profileOutgoing].combinations[profileIngoing].compressionFactor = defaultCompressionFactor;
                                 document.getElementById("compressionFactor2").value = defaultCompressionFactor;
                                 event.target.style.display = "none";
                             }
@@ -830,57 +885,111 @@ function materialProfileModal(profileName, isNew, onClose) {
                     m("td", [
                         m("div.formError", [
                             m("input.formInput", {
-                                value: newMatrix.matrix[profileOutgoing].combinations[profileIngoing].compressionFactor || "0",
+                                value: newMatrix.matrix[spliceCore][profileOutgoing].combinations[profileIngoing].compressionFactor || "0",
                                 oninput: function (event) {
-                                    newMatrix.matrix[profileOutgoing].combinations[profileIngoing].compressionFactor = FormValidation.validateNumberInput(
-                                        event.target.value,
-                                        0,
-                                        0, allowZero,
-                                        15, true,
-                                        true,
-                                        event.target.parentElement,
-                                        "Splice compression factor");
-                                    if (defaultsButtons && MaterialMatrix.defaults[newMatrix.matrix[profileOutgoing].type][newMatrix.matrix[profileIngoing].type]) {
-                                        let defaultCompressionFactor = MaterialMatrix.defaults[newMatrix.matrix[profileOutgoing].type][newMatrix.matrix[profileIngoing].type].compressionFactor;
-                                        document.getElementById("compressionFactor2Default").style.display = (newMatrix.matrix[profileOutgoing].combinations[profileIngoing].compressionFactor === defaultCompressionFactor) ? "none" : "";
+                                    if (spliceCore === MaterialMatrix.spliceCores.P) {
+                                        newMatrix.matrix[spliceCore][profileOutgoing].combinations[profileIngoing].compressionFactor = FormValidation.validateNumberInput(
+                                            event.target.value,
+                                            0,
+                                            compressionMin, allowZero,
+                                            compressionMax, true,
+                                            true,
+                                            event.target.parentElement,
+                                            "Splice compression factor");
+                                    } else {
+                                        newMatrix.matrix[spliceCore][profileOutgoing].combinations[profileIngoing].compressionFactor = FormValidation.validateIntegerInput(
+                                            event.target.value,
+                                            0,
+                                            compressionMin, allowZero,
+                                            compressionMax, true,
+                                            true,
+                                            event.target.parentElement,
+                                            "Splice compression factor");
+                                    }
+                                    if (defaultsButtons && MaterialMatrix.defaults[spliceCore][newMatrix.matrix[spliceCore][profileOutgoing].type][newMatrix.matrix[spliceCore][profileIngoing].type]) {
+                                        let defaultCompressionFactor = MaterialMatrix.defaults[spliceCore][newMatrix.matrix[spliceCore][profileOutgoing].type][newMatrix.matrix[spliceCore][profileIngoing].type].compressionFactor;
+                                        document.getElementById("compressionFactor2Default").style.display = (newMatrix.matrix[spliceCore][profileOutgoing].combinations[profileIngoing].compressionFactor === defaultCompressionFactor) ? "none" : "";
                                     }
                                 }
                             })
                         ])
                     ])
                 ]),
-                m("tr", [
-                    m("th", [
-                        m("span.tooltip", {
-                            "data-tooltip": tooltips.reverseSplicing
-                        }, "Reverse Splicing"),
-                        (defaultsButtons ? m("button.useMaterialDefault#reverse2Default", {
-                            style: {
-                                display: (!MaterialMatrix.defaults[newMatrix.matrix[profileOutgoing].type][newMatrix.matrix[profileIngoing].type]
-                                    || newMatrix.matrix[profileOutgoing].combinations[profileIngoing].reverse === MaterialMatrix.defaults[newMatrix.matrix[profileOutgoing].type][newMatrix.matrix[profileIngoing].type].reverse) ? "none" : ""
-                            },
-                            onclick: function (event) {
-                                let defaultReverse = MaterialMatrix.defaults[newMatrix.matrix[profileOutgoing].type][newMatrix.matrix[profileIngoing].type].reverse;
-                                newMatrix.matrix[profileOutgoing].combinations[profileIngoing].reverse = defaultReverse;
-                                document.getElementById("reverse2").checked = defaultReverse;
-                                event.target.style.display = "none";
-                            }
-                        }) : [])
-                    ]),
-                    m("td", [
-                        m("div.formError", [
-                            m("div.checkboxGroup", [
-                                m("input#reverse2[type='checkbox']", {
-                                    checked: newMatrix.matrix[profileOutgoing].combinations[profileIngoing].reverse,
-                                    onclick: function (event) {
-                                        newMatrix.matrix[profileOutgoing].combinations[profileIngoing].reverse = event.target.checked;
-                                        if (defaultsButtons && MaterialMatrix.defaults[newMatrix.matrix[profileOutgoing].type][newMatrix.matrix[profileIngoing].type]) {
-                                            let defaultReverse = MaterialMatrix.defaults[newMatrix.matrix[profileOutgoing].type][newMatrix.matrix[profileIngoing].type].reverse;
-                                            document.getElementById("reverse2Default").style.display = (newMatrix.matrix[profileOutgoing].combinations[profileIngoing].reverse === defaultReverse) ? "none" : "";
+                (spliceCore === MaterialMatrix.spliceCores.P ? [
+                    m("tr", [
+                        m("th", [
+                            m("span.tooltip", {
+                                "data-tooltip": tooltips.reverseSplicing
+                            }, "Reverse Splicing"),
+                            (defaultsButtons ? m("button.useMaterialDefault#reverse2Default", {
+                                style: {
+                                    display: (!MaterialMatrix.defaults[spliceCore][newMatrix.matrix[spliceCore][profileOutgoing].type][newMatrix.matrix[spliceCore][profileIngoing].type]
+                                        || newMatrix.matrix[spliceCore][profileOutgoing].combinations[profileIngoing].reverse === MaterialMatrix.defaults[spliceCore][newMatrix.matrix[spliceCore][profileOutgoing].type][newMatrix.matrix[spliceCore][profileIngoing].type].reverse) ? "none" : ""
+                                },
+                                onclick: function (event) {
+                                    let defaultReverse = MaterialMatrix.defaults[spliceCore][newMatrix.matrix[spliceCore][profileOutgoing].type][newMatrix.matrix[spliceCore][profileIngoing].type].reverse;
+                                    newMatrix.matrix[spliceCore][profileOutgoing].combinations[profileIngoing].reverse = defaultReverse;
+                                    document.getElementById("reverse2").checked = defaultReverse;
+                                    event.target.style.display = "none";
+                                }
+                            }) : [])
+                        ]),
+                        m("td", [
+                            m("div.formError", [
+                                m("div.checkboxGroup", [
+                                    m("input#reverse2[type='checkbox']", {
+                                        checked: newMatrix.matrix[spliceCore][profileOutgoing].combinations[profileIngoing].reverse,
+                                        onclick: function (event) {
+                                            newMatrix.matrix[spliceCore][profileOutgoing].combinations[profileIngoing].reverse = event.target.checked;
+                                            if (defaultsButtons && MaterialMatrix.defaults[spliceCore][newMatrix.matrix[spliceCore][profileOutgoing].type][newMatrix.matrix[spliceCore][profileIngoing].type]) {
+                                                let defaultReverse = MaterialMatrix.defaults[spliceCore][newMatrix.matrix[spliceCore][profileOutgoing].type][newMatrix.matrix[spliceCore][profileIngoing].type].reverse;
+                                                document.getElementById("reverse2Default").style.display = (newMatrix.matrix[spliceCore][profileOutgoing].combinations[profileIngoing].reverse === defaultReverse) ? "none" : "";
+                                            }
+                                        }
+                                    }),
+                                    m("label[for='reverse2']", "Use reverse splicing")
+                                ])
+                            ])
+                        ])
+                    ])
+                ] : [
+                    m("tr", [
+                        m("th", [
+                            m("label.tooltip[for='coolingFactor2']", {
+                                "data-tooltip": tooltips.coolingFactor[spliceCore]
+                            }, "Cooling Factor"),
+                            (defaultsButtons ? m("button.useMaterialDefault#coolingFactor2Default", {
+                                style: {
+                                    display: (!MaterialMatrix.defaults[spliceCore][newMatrix.matrix[spliceCore][profileOutgoing].type][newMatrix.matrix[spliceCore][profileIngoing].type]
+                                        || newMatrix.matrix[spliceCore][profileOutgoing].combinations[profileIngoing].coolingFactor === MaterialMatrix.defaults[spliceCore][newMatrix.matrix[spliceCore][profileOutgoing].type][newMatrix.matrix[spliceCore][profileIngoing].type].coolingFactor) ? "none" : ""
+                                },
+                                onclick: function (event) {
+                                    let defaultCoolingFactor = MaterialMatrix.defaults[spliceCore][newMatrix.matrix[spliceCore][profileOutgoing].type][newMatrix.matrix[spliceCore][profileIngoing].type].coolingFactor;
+                                    newMatrix.matrix[spliceCore][profileOutgoing].combinations[profileIngoing].coolingFactor = defaultCoolingFactor;
+                                    document.getElementById("coolingFactor2").value = defaultCoolingFactor;
+                                    event.target.style.display = "none";
+                                }
+                            }) : [])
+                        ]),
+                        m("td", [
+                            m("div.formError", [
+                                m("input#coolingFactor2.formInput", {
+                                    value: newMatrix.matrix[spliceCore][profileOutgoing].combinations[profileIngoing].coolingFactor || "0",
+                                    oninput: function (event) {
+                                        newMatrix.matrix[spliceCore][profileOutgoing].combinations[profileIngoing].coolingFactor = FormValidation.validateIntegerInput(
+                                            event.target.value,
+                                            0,
+                                            coolingMin, allowZero,
+                                            coolingMax, true,
+                                            true,
+                                            event.target.parentElement,
+                                            "Splice cooling factor");
+                                        if (defaultsButtons && MaterialMatrix.defaults[spliceCore][newMatrix.matrix[spliceCore][profileOutgoing].type][newMatrix.matrix[spliceCore][profileIngoing].type]) {
+                                            let defaultCoolingFactor = MaterialMatrix.defaults[spliceCore][newMatrix.matrix[spliceCore][profileOutgoing].type][newMatrix.matrix[spliceCore][profileIngoing].type].coolingFactor;
+                                            document.getElementById("coolingFactor2Default").style.display = (newMatrix.matrix[spliceCore][profileOutgoing].combinations[profileIngoing].coolingFactor === defaultCoolingFactor) ? "none" : "";
                                         }
                                     }
-                                }),
-                                m("label[for='reverse2']", "Use reverse splicing")
+                                })
                             ])
                         ])
                     ])
@@ -889,7 +998,7 @@ function materialProfileModal(profileName, isNew, onClose) {
         ])
     }
 
-    if (MaterialMatrix.isDefaultProfile(profileName) || !isNew) {
+    if (MaterialMatrix.isDefaultProfile(spliceCore, profileName) || !isNew) {
         renderSecondView();
     } else {
         renderFirstView();
@@ -897,26 +1006,31 @@ function materialProfileModal(profileName, isNew, onClose) {
 
     modalWindow.style.display = "block";
     setTimeout(function () {
-        modalWindow.style.opacity = 1;
+        modalWindow.style.opacity = "1";
         modalWindow.style.pointerEvents = "auto";
     }, 10);
 
 }
 
-function validateAndSaveChanges(newMatrix, isNew) {
+function validateAndSaveChanges(spliceCore, newMatrix, isNew) {
 
     let validationErrorsExist = false;
 
-    for (let profile of Object.keys(newMatrix.matrix)) {
-        if (newMatrix.matrix[profile].type !== "Other") {
-            for (let combo of Object.keys(newMatrix.matrix[profile].combinations)) {
-                if (newMatrix.matrix[combo].type !== "Other") {
-                    if (newMatrix.matrix[profile].combinations[combo] !== null) {
-                        if (newMatrix.matrix[profile].combinations[combo].heatFactor < 0) {
-                            validationErrorsExist = true;
-                        }
-                        if (newMatrix.matrix[profile].combinations[combo].compressionFactor < 0) {
-                            validationErrorsExist = true;
+    if (spliceCore === MaterialMatrix.spliceCores.P) {
+        for (let profile of Object.keys(newMatrix.matrix[spliceCore])) {
+            if (newMatrix.matrix[spliceCore][profile].type !== "Other") {
+                for (let combo of Object.keys(newMatrix.matrix[spliceCore][profile].combinations)) {
+                    if (newMatrix.matrix[spliceCore][combo].type !== "Other") {
+                        if (newMatrix.matrix[spliceCore][profile].combinations[combo] !== null) {
+                            if (newMatrix.matrix[spliceCore][profile].combinations[combo].heatFactor < 0) {
+                                validationErrorsExist = true;
+                            }
+                            if (newMatrix.matrix[spliceCore][profile].combinations[combo].compressionFactor < 0) {
+                                validationErrorsExist = true;
+                            }
+                            if (newMatrix.matrix[spliceCore][profile].combinations[combo].coolingFactor < 0) {
+                                validationErrorsExist = true;
+                            }
                         }
                     }
                 }
@@ -929,15 +1043,15 @@ function validateAndSaveChanges(newMatrix, isNew) {
     }
 
     // add the profile to the global list
-    MaterialMatrix.matrix = newMatrix;
+    MaterialMatrix.globalMatrix = newMatrix;
 
     // write the config file
     config.saveMaterials();
 
     if (isNew) {
-        dataCollection.logMaterialProfileCreation(MaterialMatrix.matrix);
+        dataCollection.logMaterialProfileCreation(MaterialMatrix.globalMatrix);
     } else {
-        dataCollection.logMaterialProfileEdit(MaterialMatrix.matrix);
+        dataCollection.logMaterialProfileEdit(MaterialMatrix.globalMatrix);
     }
 
     // return to the starting view
@@ -945,15 +1059,15 @@ function validateAndSaveChanges(newMatrix, isNew) {
     closeProfileModal(true);
 }
 
-function deleteProfile(name) {
+function deleteProfile(spliceCore, name) {
 
-    MaterialMatrix.matrix.deleteProfile(name);
+    MaterialMatrix.globalMatrix.deleteProfile(spliceCore, name);
     config.saveMaterials();
 
-    dataCollection.logMaterialProfileDelete(MaterialMatrix.matrix);
+    dataCollection.logMaterialProfileDelete(MaterialMatrix.globalMatrix);
 
     Postprocessor.updateMaterialDropdowns();
-    openModal();
+    openModal(spliceCore);
 }
 
 exports.openModal = openModal;

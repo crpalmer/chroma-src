@@ -1,6 +1,7 @@
 (function () {
 
     const fs = require("fs");
+    const path = require("path");
     const m = require("mithril");
 
     const Electron = require("electron");
@@ -24,15 +25,15 @@
     }
 
     let msf = new MSF();
-    let isCSF = false;
-    msf.setMaterials([null, null, null, null]);
+    let msfType = "MSF";
+    msf.clearMaterials();
 
     let driveInfo = [];
     let materialIndexInfo = [];
 
     function openMSF(filepath) {
         msf = MSF.fromLines(fs.readFileSync(filepath, "utf-8").split(/\r\n|\n|\r/));
-        isCSF = filepath.endsWith(".csf");
+        msfType = path.extname(filepath).slice(1).toUpperCase();
     }
 
     function getSpliceList(msf, relativeDistances) {
@@ -144,8 +145,8 @@
                         style: {
                             width: "150px"
                         }
-                    }, (isCSF ? "CSF" : "MSF") + " Version"),
-                    m("td", msf.version)
+                    }, msfType + " Version"),
+                    m("td", msf.version.toFixed(1))
                 ]),
                 m("tr", [
                     m("th", "Drives Used"),
@@ -183,7 +184,7 @@
                         ])
                     ])
                 ]),
-                (isCSF ? [] : [
+                (msfType === "MSF" ? [
                     m("tr", [
                         m("th", "Loading Offset"),
                         m("td", msf.loadingOffset)
@@ -196,7 +197,7 @@
                             }, msf.pulsesPerMM.toFixed(4))
                         ])
                     ])
-                ]),
+                ] : []),
                 (msf.version === 1.3 ? m("tr", [
                     m("th", "Heating Factor"),
                     m("td", msf.heatFactor + "%")
@@ -300,7 +301,7 @@
                             style: {
                                 width: "1px"
                             }
-                        }, "Direction"),
+                        }, (msf.version >= 2.0 ? "Cooling" : "Direction")),
                     ])
                 ]),
                 m("tbody#algorithmsRows", msf.algorithmsList.map(function (algorithm) {
@@ -308,7 +309,11 @@
                         m("td", materialIndexInfo[algorithm.ingoing] + "–" + materialIndexInfo[algorithm.outgoing]),
                         m("td", algorithm.heatFactor),
                         m("td", algorithm.compressionFactor),
-                        m("td", algorithm.reverse ? "Reverse" : "Forward"),
+                        (msf.version >= 2.0 ? [
+                            m("td", algorithm.coolingFactor)
+                        ] : [
+                            m("td", algorithm.reverse ? "Reverse" : "Forward")
+                        ]),
                     ])
                 }))
             ])

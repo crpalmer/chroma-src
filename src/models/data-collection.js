@@ -73,7 +73,7 @@ function serializePrinterNonIdentifying(printerProfile) {
 }
 
 function shouldLog() {
-    return (global.dataCollection && !global.env.dev && !global.env.oem && global.env.name !== "beta");
+    return (global.dataCollection && !global.env.dev && global.env.name !== "beta");
 }
 
 function logGeneric(type, data = {}) {

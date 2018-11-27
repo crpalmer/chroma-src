@@ -10,8 +10,10 @@ module.exports = {};
 module.exports.ROUNDING_FACTOR = 100000;      // used to round off floating point-based error
 
 // splice constants
-module.exports.FIRST_PIECE_MIN_LENGTH = 140;  // minimum length of first splice
-module.exports.SPLICE_MIN_LENGTH = 80;        // minimum length of all other splices
+module.exports.FIRST_PIECE_MIN_LENGTH = 140;     // minimum length of first splice for Palette/Palette+
+module.exports.FIRST_PIECE_MIN_LENGTH_P2 = 100;  // minimum length of first splice for Palette 2
+module.exports.SPLICE_MIN_LENGTH = 80;           // minimum length of all other splices
+module.exports.DEFAULT_PPM = 30;                 // ideal PPM around which some calculations are based
 
 // ping constants
 module.exports.PING_EXTRUSION_LENGTH = 20;    // target extrusion between ping sequence pauses, in mm

@@ -1664,7 +1664,6 @@ h3 .tooltip[data-tooltip]::after {
 
 .splashContent {
     padding: 23px 26px 40px;
-    background-color: #fff;
     position: absolute;
     bottom: 0;
     left: 0;
@@ -1725,7 +1724,29 @@ h3 .tooltip[data-tooltip]::after {
 }
 
 #splash {
-    background-color: transparent;
+    position: absolute;
+    width: 100%;
+    height: 100%;
+    margin: 0;
+    padding: 0;
+    -webkit-box-sizing: border-box;
+    -moz-box-sizing: border-box;
+    box-sizing: border-box;
+    pointer-events: none;
+}
+
+.splashInner {
+    position: absolute;
+    top: -5px;
+    bottom: -5px;
+    left: -5px;
+    right: -5px;
+    -webkit-box-sizing: border-box;
+    -moz-box-sizing: border-box;
+    box-sizing: border-box;
+    background-color: #fff;
+    background-image: url('splash.svg');
+    background-size: cover;
     pointer-events: none;
 }
 
@@ -1734,6 +1755,7 @@ h3 .tooltip[data-tooltip]::after {
     margin-bottom: 5px;
     font-size: 4em;
     font-weight: 600;
+    color: #fff;
 }
 
 #about h1 .version {
@@ -1756,7 +1778,7 @@ h3 .tooltip[data-tooltip]::after {
     font-size: 0.65em;
     position: relative;
     bottom: 0.04em;
-    color: #777;
+    color: #999;
 }
 
 #splash .build {
@@ -1764,13 +1786,14 @@ h3 .tooltip[data-tooltip]::after {
     font-size: 2em;
     margin-left: 3px;
     margin-top: 10px;
-    color: #4db9e7;
+    color: #1bd7bd;
 }
 
 #splash .bottom {
     position: absolute;
     bottom: 15px;
     left: 29px;
+    color: #999;
 }
 
 #about h3 {

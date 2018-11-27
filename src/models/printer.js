@@ -1,9 +1,22 @@
 
+const MSF = require('./msf');
+
 const TRANSITION_TOWER = require("./common").TRANSITION_TOWER;
 const BOWDEN_NONE = require("./common").BOWDEN_NONE;
 const PING_EXTRUSION_COUNTS = require("./common").PING_EXTRUSION_COUNTS;
 
+const FIRST_PIECE_MIN_LENGTH = require("./common").FIRST_PIECE_MIN_LENGTH;
+const FIRST_PIECE_MIN_LENGTH_P2 = require("./common").FIRST_PIECE_MIN_LENGTH_P2;
+
+const DEFAULT_PPM = require("./common").DEFAULT_PPM;
+
 const lerp = require("./common").lerp;
+
+const PaletteTypes = {
+    Palette: "Palette/Palette+",
+    Palette2: "Palette 2",
+    Palette2Pro: "Palette 2 Pro"
+};
 
 class Printer {
 
@@ -21,6 +34,8 @@ class Printer {
         this.volumetric = false;
         this.independentExtruderAxes = false;
         this.extruderStepsPerMM = 0;
+        this.paletteType = PaletteTypes.Palette;
+        this.integrated = false;
 
         this.filamentDiameter = 1.75;
         this.nozzleDiameter = 0.4;
@@ -80,7 +95,55 @@ class Printer {
 
     }
 
+    isPalette2() {
+        return (this.paletteType === PaletteTypes.Palette2
+            || this.paletteType === PaletteTypes.Palette2Pro);
+    }
+
+    getSpliceCore() {
+        switch (this.paletteType) {
+            case PaletteTypes.Palette2:
+                return "SC";
+            case PaletteTypes.Palette2Pro:
+                return "SCP";
+            default:
+                return "P";
+        }
+    }
+
+    isIntegratedMSF() {
+        return this.isPalette2() && this.integrated;
+    }
+
+    getMSFVersion() {
+        return this.isPalette2() ? 2.0 : 1.4;
+    }
+
+    getMSFExtension(allowIntegrated = true) {
+        if (this.isPalette2()) {
+            return (allowIntegrated && this.isIntegratedMSF()) ? "mcf" : "maf";
+        }
+        return "msf";
+    }
+
+    getMSF2PrinterID() {
+        if (!this.uuid) {
+            return MSF.intToHex(1, 16);
+        }
+        return this.uuid.replace(/-/g, "").slice(-16);
+    }
+
+    getMinFirstPieceLength() {
+        if (this.isPalette2()) {
+            return FIRST_PIECE_MIN_LENGTH_P2;
+        }
+        return FIRST_PIECE_MIN_LENGTH;
+    }
+
     getPulsesPerMM() {
+        if (this.isPalette2()) {
+            return DEFAULT_PPM;
+        }
         if (this.printValue === 0 || this.calibrationGCodeLength === 0) {
             return 0;
         }
@@ -140,6 +203,8 @@ class Printer {
         this.volumetric = other.volumetric;
         this.independentExtruderAxes = other.independentExtruderAxes;
         this.extruderStepsPerMM = other.extruderStepsPerMM;
+        this.paletteType = other.paletteType;
+        this.integrated = other.integrated;
 
         this.filamentDiameter = other.filamentDiameter;
         this.nozzleDiameter = other.nozzleDiameter;
@@ -210,6 +275,8 @@ class Printer {
             && this.volumetric === other.volumetric
             && this.independentExtruderAxes === other.independentExtruderAxes
             && this.extruderStepsPerMM === other.extruderStepsPerMM
+            && this.paletteType === other.paletteType
+            && this.integrated === other.integrated
             && this.filamentDiameter === other.filamentDiameter
             && this.nozzleDiameter === other.nozzleDiameter
             && this.extruderCount === other.extruderCount
@@ -267,6 +334,8 @@ class Printer {
             volumetric: this.volumetric,
             independentExtruderAxes: this.independentExtruderAxes,
             extruderStepsPerMM: this.extruderStepsPerMM,
+            paletteType: this.paletteType,
+            integrated: this.integrated,
             filamentDiameter: this.filamentDiameter,
             nozzleDiameter: this.nozzleDiameter,
             extruderCount: this.extruderCount,
@@ -381,6 +450,8 @@ class Printer {
                 printer.volumetric = !!json.volumetric;
                 printer.independentExtruderAxes = !!json.independentExtruderAxes;
                 printer.extruderStepsPerMM = (json.extruderStepsPerMM || 0);
+                printer.paletteType = (json.paletteType || PaletteTypes.Palette);
+                printer.integrated = !!json.integrated;
 
                 printer.filamentDiameter = json.filamentDiameter;
                 printer.nozzleDiameter = json.nozzleDiameter;
@@ -437,4 +508,5 @@ const DEFAULTS = new Printer();
 
 module.exports = Printer;
 
+module.exports.PaletteTypes = PaletteTypes;
 module.exports.DEFAULTS = DEFAULTS;

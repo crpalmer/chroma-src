@@ -4,15 +4,11 @@ const Electron = require("electron");
 const BrowserWindow = Electron.remote.BrowserWindow;
 const dialog = Electron.remote.dialog;
 
-const MSF = require("../models/msf");
-
-let msf = null;
-
 function selectMSF() {
     dialog.showOpenDialog({
         filters: [{
             name: "MSF",
-            extensions: ["msf", "csf"]
+            extensions: ["msf", "maf", "csf"]
         }]
     }, function (filenames) {
         if (filenames === undefined) {
@@ -49,7 +45,7 @@ function openEditor(filepath) {
         editor.loadURL("file://" + __dirname + "/../windows/msf.html?win=" + editor.id + "&path=" + encodeURIComponent(filepath));
     }
     editor.once("ready-to-show", function () {
-        let basename = path.basename(filepath, (filepath.endsWith(".msf") ? ".msf" : ".csf"));
+        let basename = path.basename(filepath, path.extname(filepath));
         editor.setTitle((basename.length > 80 ? basename.substr(0, 80) + "..." : basename) + " — MSF Viewer");
         if (process.platform === "darwin") {
             editor.setRepresentedFilename(filepath);

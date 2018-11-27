@@ -16,7 +16,6 @@ const TRANSITION_TOWER = require("../models/common").TRANSITION_TOWER;
 const SIDE_TRANSITIONS = require("../models/common").SIDE_TRANSITIONS;
 const NO_TRANSITIONS = require("../models/common").NO_TRANSITIONS;
 
-const FIRST_PIECE_MIN_LENGTH = require("./common").FIRST_PIECE_MIN_LENGTH;
 const SPLICE_MIN_LENGTH = require("./common").SPLICE_MIN_LENGTH;
 const ZIGGURAT_THRESHOLD = require("./common").ZIGGURAT_THRESHOLD;
 
@@ -40,12 +39,13 @@ const DEBUG = {
 
 // SPLICE LENGTH CHECKS
 
-function checkSpliceLength(spliceList) {
+function checkSpliceLength(printer, spliceList) {
     if (spliceList.length === 1) {
-        if (spliceList[0][1] < FIRST_PIECE_MIN_LENGTH - 5) {
+        const firstPieceMinLength = printer.getMinFirstPieceLength();
+        if (spliceList[0][1] < firstPieceMinLength - 5) {
             throw {
                 message: "First Piece Too Short",
-                detail: "The first piece created by Palette would be " + (spliceList[0][1] / 10).toFixed(1) + " cm, but must be at least " + (FIRST_PIECE_MIN_LENGTH / 10).toFixed(0) + " cm long. Try adding some more skirts to this model.",
+                detail: "The first piece created by Palette would be " + (spliceList[0][1] / 10).toFixed(1) + " cm, but must be at least " + (firstPieceMinLength / 10).toFixed(0) + " cm long. Try adding some more skirts to this model.",
                 exitCode: 20
             };
         }
@@ -449,77 +449,73 @@ function addPrintExtruderChange(raft, printExtruder) {
     }
 }
 
-async function addOEMData(raft, msf) {
-    let printTemp = 0;
-    let bedTemp = 0;
+async function addOEMData(raft, printer, msf, filename) {
     raft.rewind();
-    await raft.play(async function (instruction, state) {
-        if (state.get("extruderTemp").position !== null && state.get("extruderTemp").position > printTemp) {
-            printTemp = state.get("extruderTemp").position;
-        }
-        if (state.get("bedTemp").position !== null && state.get("bedTemp").position > bedTemp) {
-            bedTemp = state.get("bedTemp").position;
-        }
-    });
-    raft.insertInstruction(new Raft.OSoftResetInstruction({}));
-    raft.rewind();
-    raft.stepForward();
-    let colorsUsed = msf.getColorsUsedLabels();
-    let driveInformation = "";
-    for (let i = 0; i < 4; i++) {
-        driveInformation += msf.materials[i].index + colorsUsed[i] + ":";
-    }
-    raft.insertInstruction(new Raft.ODriveInformationInstruction({
-        value: driveInformation
+    raft.insertInstruction(new Raft.OVersionInstruction({
+        major: 2,
+        minor: 0
     }));
-    raft.insertInstruction(new Raft.OAlgorithmCountInstruction({
-        count: 0
+    raft.insertInstruction(new Raft.OPrinterProfileInstruction({
+        id: printer.getMSF2PrinterID()
+    }));
+    raft.insertInstruction(new Raft.OSlicerProfileInstruction({
+        id: "0001" // always 1 with Chroma
+    }));
+    raft.insertInstruction(new Raft.OAdjustedPPMInstruction({
+        adjustment: 0 // always 0 with Chroma
+    }));
+    const colorsUsed = msf.getColorsUsedLabels();
+    raft.insertInstruction(new Raft.OMaterialsUsedInstruction({
+        materials: [0, 1, 2, 3].map((i) => {
+            let color = MSF.colorInfo[msf.colorsUsed[i]].color;
+            if (color) {
+                color = [
+                    color.substr(1, 2),
+                    color.substr(3, 2),
+                    color.substr(5, 2),
+                ]
+            } else {
+                color = [255, 255, 255]
+            }
+            return new Raft.OMaterial({
+                index: msf.materials[i].index,
+                color: color,
+                name: MSF.replaceSpaces(MSF.truncate(colorsUsed[i], MSF.MSF2_CHAR_LIMIT))
+            });
+        })
     }));
     raft.insertInstruction(new Raft.OSpliceCountInstruction({
         count: msf.spliceList.length
     }));
+    raft.insertInstruction(new Raft.OPingCountInstruction({
+        count: msf.pingList.length
+    }));
+    raft.insertInstruction(new Raft.OAlgorithmCountInstruction({
+        count: msf.algorithmsList.length
+    }));
+    raft.insertInstruction(new Raft.OHotSwapCountInstruction({
+        count: msf.hotSwapList.length
+    }));
     for (let splice of msf.spliceList) {
         raft.insertInstruction(new Raft.OSpliceDataInstruction({
             drive: splice[0],
-            length: splice[1]
+            length: splice[1],
         }));
     }
-    if (global.pingOptions.useMechanicalPings) {
-        for (let ping of msf.pingList) {
-            raft.insertInstruction(new Raft.OPingDataInstruction({
-                length: ping[0]
-            }));
-        }
-    }
-    raft.insertInstruction(new Raft.OStartMulticolorInstruction({}));
-    if (printTemp > 0) {
-        raft.insertInstruction(new Raft.SetToolheadTemperatureInstruction({
-            stabilize: false,
-            toolhead: 0,
-            temperature: printTemp
+    for (let alg of msf.algorithmsList) {
+        raft.insertInstruction(new Raft.OAlgorithmDataInstruction({
+            ingoing: alg.ingoing,
+            outgoing: alg.outgoing,
+            heat: alg.heatFactor,
+            compression: alg.compressionFactor,
+            cooling: alg.coolingFactor
         }));
     }
-    if (bedTemp > 0) {
-        raft.insertInstruction(new Raft.SetBedTemperatureInstruction({
-            stabilize: false,
-            temperature: bedTemp
-        }));
-    }
-    while (true) {
-        let stepping = raft.stepForward();
-        if (!stepping) break;
-        if (raft.getCurrentState().get("extrusion").totalDispensed > 0) {
-            raft.stepBackward();
-            break;
-        }
-        let currentInstruction = raft.getCurrentInstruction();
-        if (((currentInstruction instanceof Raft.SetToolheadTemperatureInstruction)
-                || (currentInstruction instanceof Raft.SetBedTemperatureInstruction))
-            && currentInstruction.stabilize === true) {
-            raft.stepBackward();
-            raft.deleteInstruction();
-        }
-    }
+    // hot swap data loop goes here (nonexistent for now)
+    raft.insertInstruction(new Raft.OStartMulticolorInstruction({
+        filename: MSF.replaceSpaces(MSF.truncate(filename, MSF.MSF2_CHAR_LIMIT)),
+        printLength: msf.spliceList[msf.spliceList.length - 1][1]
+    }));
     raft.insertInstruction(new Raft.StopInstruction({}));
 }
 
@@ -924,17 +920,22 @@ class Print {
             await progressBar.increment("Calculating bounding box");
         }
 
-	boundingBox.xMax = -Infinity;
-	boundingBox.xMin = Infinity;
-	boundingBox.yMax = -Infinity;
-	boundingBox.yMin = Infinity;
-
         raft.rewind();
         await raft.play(async function (instruction, state) {
 
             if ((instruction instanceof Raft.MoveInstruction) && !(instruction instanceof Raft.HomeInstruction)) {
                 if (instruction.x !== null || instruction.y !== null) {
                     let currentZ = state.get("z").position;
+                    raft.stepBackward();
+                    let previousZ = raft.getCurrentState().get("z").position;
+                    raft.stepForward();
+                    if (currentZ !== null && previousZ > currentZ
+                        && layerStats[previousZ] !== undefined && layerStats[previousZ].printLayer) {
+                        boundingBox.xMax = -Infinity;
+                        boundingBox.xMin = Infinity;
+                        boundingBox.yMax = -Infinity;
+                        boundingBox.yMin = Infinity;
+                    }
                     if (printLayerHeights.indexOf(currentZ) >= 0) {
                         let currentE = state.get("extrusion").position;
                         raft.stepBackward();
@@ -1261,8 +1262,8 @@ class Print {
             throw err;
         }
 
-        if (global.env.oem) {
-            await addOEMData(this._outRaft, msf);
+        if (this._printerProfile.isIntegratedMSF()) {
+            await addOEMData(this._outRaft, this._printerProfile, msf, this.inputName);
         }
 
         return msf;
@@ -1290,7 +1291,7 @@ class Print {
         // speed settings
         const speeds = this.speeds;
 
-        const cutterToScrollWheel = (global.env.oem ? 450 : 760);
+        const cutterToScrollWheel = (printer.isPalette2() ? 450 : 760);
         const effectiveLoadingOffset = (printer.loadingOffset / printer.getPulsesPerMM()) + cutterToScrollWheel;
 
         // retraction settings
@@ -1641,7 +1642,7 @@ class Print {
             let totalExtrusion = raft.getCurrentState().get("extrusion").totalDispensed;
             // account for (1) rounding errors in extrusion tracking, and (2) length changes from ping correction
             if ((totalExtrusion * 0.97) + effectiveLoadingOffset < (totalPrintLength * 1.03)) {
-                if (global.env.oem) {
+                if (printer.isIntegratedMSF()) {
                     if (totalExtrusion >= nextPingStart) {
                         if (global.pingOptions.useMechanicalPings) {
                             for (let instruction of mechPingInstructions) {
@@ -2133,7 +2134,7 @@ class Print {
                         currentTool,
                         spliceLength + firmwarePurge
                     ]);
-                    checkSpliceLength(msf.spliceList);
+                    checkSpliceLength(printer, msf.spliceList);
 
                     currentTool = currentInstruction.toolhead;
 
@@ -2261,7 +2262,7 @@ class Print {
         const speeds = this.speeds;
         const purgeSpeed = printer.transitionSettings.sideTransitions.purgeSpeed;
 
-        const cutterToScrollWheel = (global.env.oem ? 450 : 760);
+        const cutterToScrollWheel = (printer.isPalette2() ? 450 : 760);
         const effectiveLoadingOffset = (printer.loadingOffset / printer.getPulsesPerMM()) + cutterToScrollWheel;
 
         // retraction settings
@@ -2435,7 +2436,7 @@ class Print {
             let currentE = raft.getCurrentState().get("extrusion");
             let totalExtrusion = currentE.totalDispensed;
             let cumulative = currentE.coordinateMode === Raft.CoordinateModes.Absolute;
-            if (global.env.oem) {
+            if (printer.isIntegratedMSF()) {
                 if (totalExtrusion >= nextPingStart) {
                     if (global.pingOptions.useMechanicalPings) {
                         for (let instruction of mechPingInstructions) {
@@ -3010,8 +3011,9 @@ class Print {
                     let spliceLength = totalExtrusion + thisTransitionLength * targetTransitionPosition - infillDumpLength.offset;
                     thisTransitionLength -= infillDumpLength.total;
                     let firstPieceExtraLength = 0;
-                    if (msf.spliceList.length === 0 && spliceLength < FIRST_PIECE_MIN_LENGTH) {
-                        firstPieceExtraLength = (FIRST_PIECE_MIN_LENGTH - spliceLength) + 1;
+                    const firstPieceMinLength = printer.getMinFirstPieceLength();
+                    if (msf.spliceList.length === 0 && spliceLength < firstPieceMinLength) {
+                        firstPieceExtraLength = (firstPieceMinLength - spliceLength) + 1;
                     } else if (msf.spliceList.length > 0) {
                         let previousSpliceLength = msf.spliceList[msf.spliceList.length - 1][1];
                         if (spliceLength - previousSpliceLength < SPLICE_MIN_LENGTH) {
@@ -3026,7 +3028,7 @@ class Print {
                         currentTool,
                         spliceLength + firstPieceExtraLength + firmwarePurge
                     ]);
-                    checkSpliceLength(msf.spliceList);
+                    checkSpliceLength(printer, msf.spliceList);
 
                     currentTool = currentInstruction.toolhead;
 
@@ -3094,7 +3096,7 @@ class Print {
 
         const printLayerHeights = this.printLayerHeights;
         const firmwarePurge = printer.firmwarePurge;
-        const cutterToScrollWheel = (global.env.oem ? 450 : 760);
+        const cutterToScrollWheel = (printer.isPalette2() ? 450 : 760);
         const effectiveLoadingOffset = (printer.loadingOffset / printer.getPulsesPerMM()) + cutterToScrollWheel;
 
         let firstPrintLayerReached = false;
@@ -3158,7 +3160,7 @@ class Print {
                         currentTool,
                         totalExtrusion + firmwarePurge
                     ]);
-                    checkSpliceLength(msf.spliceList);
+                    checkSpliceLength(printer, msf.spliceList);
                 }
                 currentTool = currentInstruction.toolhead;
                 raft.stepBackward();

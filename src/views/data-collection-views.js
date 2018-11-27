@@ -23,7 +23,7 @@ function showDataCollectionDialog(callback) {
         }
         return;
     }
-    if (global.env.dev || global.env.oem || global.env.name === "beta") {
+    if (global.env.dev || global.env.name === "beta") {
         if (useCB) {
             callback();
         }

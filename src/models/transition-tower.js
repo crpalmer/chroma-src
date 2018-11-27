@@ -3,7 +3,6 @@ const Raft = require("raft-js");
 
 const BoundingBox = require("./bounding-box");
 
-const FIRST_PIECE_MIN_LENGTH = require("./common").FIRST_PIECE_MIN_LENGTH;
 const SPLICE_MIN_LENGTH = require("./common").SPLICE_MIN_LENGTH;
 
 const TOWER_MIN_DIMENSION = require("./common").TOWER_MIN_DIMENSION;
@@ -399,7 +398,7 @@ class TransitionTower {
                     lastExtraTransitionLength = extraRequiredLength;
                     transition.extraPieceLength = extraRequiredLength;
                     if (totalExtrusionAtLastTransition === 0) {
-                        extraFirstPieceLength = FIRST_PIECE_MIN_LENGTH - (totalExtrusionAtCurrentTransition + extraRequiredLength
+                        extraFirstPieceLength = printerProfile.getMinFirstPieceLength() - (totalExtrusionAtCurrentTransition + extraRequiredLength
                             + (layerPurgeLength * targetPosition));
                         extraFirstPieceLength = Math.max(0, extraFirstPieceLength);
                         totalExtrusionOfPrint += extraFirstPieceLength;
@@ -657,12 +656,13 @@ class TransitionTower {
     async correctLayerError(progressBar = null) {
 
         const print = this._print;
+        const printerProfile = print._printerProfile;
         const driveColorStrengths = this.driveColorStrengths;
 
-        const purgeLength = print._printerProfile.transitionSettings.purgeLength;
-        const zigguratPurgeLength = print._printerProfile.transitionSettings.initialPurgeLength;
-        const pingExtrusionLength = print._printerProfile.getPingExtrusionLength();
-        const minTowerDensity = print._printerProfile.transitionSettings.towers.minDensity;
+        const purgeLength = printerProfile.transitionSettings.purgeLength;
+        const zigguratPurgeLength = printerProfile.transitionSettings.initialPurgeLength;
+        const pingExtrusionLength = printerProfile.getPingExtrusionLength();
+        const minTowerDensity = printerProfile.transitionSettings.towers.minDensity;
 
         // Step 6. Determine the amount of error in transition generation for each layer
         // - if too low, increase the layer's density accordingly
@@ -682,9 +682,9 @@ class TransitionTower {
                 + this.layerStats[z].totalExtraPieceLength;
             let requiredPurgeLength = layerPurgeLength * layerTransitionCount;
             if (global.advancedMode && (this.rafts.raftLayers < this.zigguratLayerCount) && driveColorStrengths
-                && print._printerProfile.transitionSettings.purgeLength > print._printerProfile.transitionSettings.minPurgeLength) {
+                && printerProfile.transitionSettings.purgeLength > printerProfile.transitionSettings.minPurgeLength) {
                 requiredPurgeLength = print.layerInfo[z].toolChanges.reduce(function (accumulator, current) {
-                    return accumulator + print._printerProfile.interpolatePurgeLengths(
+                    return accumulator + printerProfile.interpolatePurgeLengths(
                         driveColorStrengths[current.from],
                         driveColorStrengths[current.to]
                     );
@@ -714,9 +714,9 @@ class TransitionTower {
                 let layerPurgeLength = (i < this.zigguratLayerCount) ? zigguratPurgeLength : purgeLength;
                 let requiredPurgeLength = layerPurgeLength * layerTransitionCount;
                 if (global.advancedMode && (i >= this.zigguratLayerCount) && driveColorStrengths
-                    && print._printerProfile.transitionSettings.purgeLength > print._printerProfile.transitionSettings.minPurgeLength) {
+                    && printerProfile.transitionSettings.purgeLength > printerProfile.transitionSettings.minPurgeLength) {
                     requiredPurgeLength = print.layerInfo[z].toolChanges.reduce(function (accumulator, current) {
-                        return accumulator + print._printerProfile.interpolatePurgeLengths(
+                        return accumulator + printerProfile.interpolatePurgeLengths(
                             driveColorStrengths[current.from],
                             driveColorStrengths[current.to]
                         );
@@ -750,7 +750,7 @@ class TransitionTower {
                     updatedLayers[z] = true;
                     towerUpdated = true;
                 }
-            } else if (!global.env.oem) {
+            } else if (!printerProfile.isIntegratedMSF()) {
                 if (this.precode[z].totalExtrusion < pingExtrusionLength * 1.3) {
                     let requiredLength = (pingExtrusionLength * 1.3) - this.precode[z].perimeterExtrusion;
                     let infillExtrusion = this.precode[z].totalExtrusion - this.precode[z].perimeterExtrusion;

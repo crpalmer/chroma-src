@@ -6,7 +6,6 @@ const Raft = require("raft-js");
 
 const appVersion = require("../package.json").version;
 const MaterialMatrix = require("../models/material-matrix");
-const MSF = require("../models/msf");
 const Print = require("../models/print");
 const Printer = require("../models/printer");
 
@@ -15,7 +14,7 @@ let program = require("commander");
 let debug = false;
 let printerProfile = null;
 let printExtruder = 0;
-let materialMatrix = null;
+let globalMatrix = null;
 let driveColors = [1, 1, 1, 1];
 let driveMaterials = [null, null, null, null];
 let inputPath = null;
@@ -147,14 +146,14 @@ function parseArgs() {
 
     // load material matrix
     if (program.materials === undefined) {
-        materialMatrix = MaterialMatrix.getDefault();
+        globalMatrix = MaterialMatrix.getDefault();
     } else {
         if (!fs.existsSync(program.materials)) {
             console.error("Materials file does not exist");
             process.exit(3);
         }
         try {
-            materialMatrix = MaterialMatrix.unserialize(loadYML(program.materials), false);
+            globalMatrix = MaterialMatrix.unserialize(loadYML(program.materials), false);
         } catch (e) {
             console.error("Materials file is not readable");
             process.exit(3);
@@ -185,7 +184,7 @@ function parseArgs() {
         }
         for (let i = 0; i < program.driveMaterials.length; i++) {
             let material = program.driveMaterials[i];
-            if (!materialMatrix.matrix.hasOwnProperty(material)) {
+            if (!globalMatrix.matrix.hasOwnProperty(material)) {
                 console.error("Nonexistent material '" + material + "' specified");
                 process.exit(5);
             }
@@ -229,7 +228,7 @@ function parseArgs() {
 
 }
 
-function checkValidMaterialCombinations(print, driveMaterials, matrix) {
+function checkValidMaterialCombinations(print, driveMaterials, materialMatrix) {
     let materials = driveMaterials.slice();
     let conflicts = [];
     let emptyAlgorithms = [];
@@ -239,11 +238,11 @@ function checkValidMaterialCombinations(print, driveMaterials, matrix) {
                 let ingoing = materials[transition.to];
                 let outgoing = materials[transition.from];
                 if (ingoing !== null && outgoing !== null) {
-                    let spliceSettings = matrix.matrix[ingoing].combinations[outgoing];
+                    let spliceSettings = materialMatrix.matrix[ingoing].combinations[outgoing];
                     if (spliceSettings === null) {
                         let error1 = outgoing + " cannot be spliced with " + ingoing;
                         let error2 = ingoing + " cannot be spliced with " + outgoing;
-                        if (conflicts.indexOf(error1) < 0 && conficts.indexOf(error2) < 0) {
+                        if (conflicts.indexOf(error1) < 0 && conflicts.indexOf(error2) < 0) {
                             conflicts.push(error1);
                         }
                     } else if (spliceSettings.heatFactor === 0 || spliceSettings.compressionFactor === 0) {
@@ -302,7 +301,7 @@ async function runProcess() {
             console.error("Some but not all materials specified");
             process.exit(6);
         }
-        let materialIssues = checkValidMaterialCombinations(print, driveMaterials, materialMatrix);
+        let materialIssues = checkValidMaterialCombinations(print, driveMaterials, globalMatrix);
         if (materialIssues.conflicts.length > 0) {
             console.error("Material compatibility conflict" + (materialIssues.conflicts.length > 1 ? "s" : "") + ":");
             materialIssues.conflicts.forEach(function (conflict) {
@@ -326,7 +325,7 @@ async function runProcess() {
             });
         }
         let msf = await print.createOutput(driveColors, driveMaterials);
-        if (!global.env.oem) {
+        if (!printerProfile.isIntegratedMSF()) {
             let msfOut = msf.createMSF();
             fs.writeFileSync(outputPath, msfOut);  // output the MSF
         }
@@ -335,7 +334,7 @@ async function runProcess() {
             fs.writeFileSync(outputPath + ".txt", msfPlain);   // output the plain MSF
         }
         let printFilePath = outputPath + print.inputExt;
-        if (global.env.oem) {
+        if (printerProfile.isIntegratedMSF()) {
             printFilePath = outputPath;
         }
         if (print._printerProfile.postprocessing === "makerbot") {
@@ -358,7 +357,8 @@ async function runProcess() {
             console.error("Chroma CLI does not currently support .g3drem conversion");
             process.exit(10);
         } else if (print.inputExt === ".g3drem") {
-            printFilePath = outputPath.replace(".msf", "_msf") + ".g3drem";
+            const extname = path.extname(outputPath);
+            printFilePath = outputPath.replace(extname, "_" + extname.slice(1)) + ".g3drem";
             print._raft.save(printFilePath);
         } else {
             print._raft.save(printFilePath);

@@ -553,7 +553,11 @@ function setCustomColor(driveNumber, swatchElement) {
 
 }
 
-function checkValidMaterialCombination(driveNumber, newMaterial, existingMaterials) {
+function checkValidMaterialCombination(spliceCore, driveNumber, newMaterial, existingMaterials) {
+    if (spliceCore !== MaterialMatrix.spliceCores.P) return {
+        conflicts: [],
+        emptyAlgorithms: []
+    };
     let materials = existingMaterials.slice();
     materials[driveNumber] = newMaterial;
     let conflicts = [];
@@ -564,7 +568,7 @@ function checkValidMaterialCombination(driveNumber, newMaterial, existingMateria
                 let ingoing = materials[transition.to];
                 let outgoing = materials[transition.from];
                 if (ingoing !== null && outgoing !== null) {
-                    let spliceSettings = MaterialMatrix.matrix.matrix[ingoing].combinations[outgoing];
+                    let spliceSettings = MaterialMatrix.globalMatrix.matrix[spliceCore][ingoing].combinations[outgoing];
                     if (spliceSettings === null) {
                         if (newMaterial === ingoing) {
                             if (conflicts.indexOf(outgoing) < 0) {
@@ -798,6 +802,7 @@ async function openFile(filepath) {
                 }
             }, "Close Print"),
         ]);
+        updateMaterialDropdowns();
     } catch (err) {
         if (global.env.dev) {
             console.error(err);
@@ -934,9 +939,9 @@ async function saveFile() {
         }
         saveDialogOpen = true;
         let saveDialogOptions = {};
-        if (global.env.oem) {
+        if (global.print._printerProfile.isIntegratedMSF()) {
             saveDialogOptions = {
-                defaultPath: path.join(global.print.inputDir, (global.print.inputName + ".oem" + global.print.inputExt)),
+                defaultPath: path.join(global.print.inputDir, (global.print.inputName + "." + global.print._printerProfile.getMSFExtension() + global.print.inputExt)),
                 title: "Save print file",
                 filters: [{
                     name: global.print.inputExt,
@@ -945,11 +950,11 @@ async function saveFile() {
             };
         } else {
             saveDialogOptions = {
-                defaultPath: path.join(global.print.inputDir, (global.print.inputName + ".msf")),
+                defaultPath: path.join(global.print.inputDir, (global.print.inputName + "." + global.print._printerProfile.getMSFExtension())),
                 title: "Save MSF file",
                 filters: [{
                     name: "MSF",
-                    extensions: ["msf"]
+                    extensions: [global.print._printerProfile.getMSFExtension()]
                 }]
             };
         }
@@ -964,8 +969,8 @@ async function saveFile() {
             } else {
                 menu.disableModalActions();
                 let basename = path.basename(msfPath);
-                if (!global.env.oem && basename.length > 63) {
-                    let msfTrim = basename.slice(0, 59) + ".msf";
+                if (!global.print._printerProfile.isIntegratedMSF() && basename.length > 63) {
+                    let msfTrim = basename.slice(0, 59) + "." + global.print._printerProfile.getMSFExtension();
                     msfPath = msfPath.replace(basename, msfTrim);
                 }
                 window.dispatchEvent(new Event("output-save-start"));
@@ -981,7 +986,7 @@ async function saveFile() {
                     }
                     let msf = await global.print.createOutput(selectedDriveColors, msfMaterials, LoadingView, getDriveColorStrengths(selectedDriveColors));
                     await LoadingView.increment("Saving files");
-                    if (!global.env.oem) {
+                    if (!global.print._printerProfile.isIntegratedMSF()) {
                         let msfOut = msf.createMSF();
                         fs.writeFileSync(msfPath, msfOut);                 // output the MSF
                     }
@@ -992,17 +997,17 @@ async function saveFile() {
                     }
                     if (global.exportScreenshot) {
                         let screenshotPath;
-                        if (global.env.oem) {
-                            screenshotPath = msfPath.replace(".oem" + global.print.inputExt, ".png");
+                        if (global.print._printerProfile.isIntegratedMSF()) {
+                            screenshotPath = msfPath.replace("." + global.print._printerProfile.getMSFExtension() + global.print.inputExt, ".png");
                         } else {
-                            screenshotPath = msfPath.replace(".msf", ".png");
+                            screenshotPath = msfPath.replace("." + global.print._printerProfile.getMSFExtension(), ".png");
                         }
                         let screenshot = Visualizer.getScreenshot();
                         fs.writeFileSync(screenshotPath, screenshot, "base64");
                     }
                     await LoadingView.increment("Saving files");
                     let printFilePath = msfPath + global.print.inputExt;
-                    if (global.env.oem) {
+                    if (global.print._printerProfile.isIntegratedMSF()) {
                         printFilePath = msfPath;
                     }
                     if (global.print._printerProfile.postprocessing === "makerbot") {
@@ -1037,7 +1042,7 @@ async function saveFile() {
                         });
                     } else if (global.print._printerProfile.postprocessing === "g3drem" || global.print.inputExt === ".g3drem") {
                         global.print._outRaft.parser = new Raft.G3DremParser(global.print._outRaft.getEngine());
-                        printFilePath = msfPath.replace(".msf", "_msf") + ".g3drem";
+                        printFilePath = msfPath.replace(path.extname(msfPath), "_" + global.print._printerProfile.getMSFExtension) + ".g3drem";
                         let header = await global.print.getDremelHeader();
                         FileImages.addImageToDremelHeader(header, function (err, header) {
                             global.print._outRaft.parser.binaryHeader = header;
@@ -1136,6 +1141,10 @@ function updateProfileDropdown() {
 
 function updateMaterialDropdowns() {
     materials = [null, null, null, null];
+    let spliceCore = null;
+    if (global.print) {
+        spliceCore = global.print._printerProfile.getSpliceCore();
+    }
     for (let i = 1; i <= 4; i++) {
         let drive = i - 1;
         document.getElementById("drive" + i + "materialSelect").title = "Select material";
@@ -1155,68 +1164,70 @@ function updateMaterialDropdowns() {
                     document.getElementById("drive" + i + "materialNone").style.display = "none";
                     let materialsList = document.getElementById("drive" + i + "materials").children;
                     Array.prototype.forEach.call(materialsList, function (el) {
-                        el.dataset.checked = 0;
+                        el.dataset.checked = "0";
                     });
                     e.stopPropagation();
                 }
             }, "Unset Material"),
-            Object.keys(MaterialMatrix.matrix.matrix).map(function (material) {
-                return m("div", {
-                    onclick: function (e) {
-                        let issues = checkValidMaterialCombination(drive, material, materials);
-                        if (issues.conflicts.length === 0 && issues.emptyAlgorithms.length === 0) {
-                            materials[drive] = material;
-                            let displayName = (material.length > 10 ? material.substr(0, 10) + "…" : material);
-                            if (MaterialMatrix.isDefaultProfile(material)) {
-                                displayName = MaterialMatrix.matrix.matrix[material].type;
-                            }
-                            document.getElementById("drive" + i + "materialSelect").title = material;
-                            document.getElementById("drive" + i + "materialLabel").innerText = displayName;
-                            document.getElementById("drive" + i + "materials").classList.add("hidden");
-                            document.getElementById("drive" + i + "materialNone").style.display = "";
-                            let materialsList = document.getElementById("drive" + i + "materials").children;
-                            Array.prototype.forEach.call(materialsList, function (el) {
-                                el.dataset.checked = (el.innerText === material ? 1 : 0);
-                            });
-                            e.stopPropagation();
-                        } else if (issues.conflicts.length > 0) {
-                            let thisMaterialType = MaterialMatrix.matrix.matrix[material].type;
-                            let conflictTypes = issues.conflicts.map(function (material) {
-                                return MaterialMatrix.matrix.matrix[material].type;
-                            });
-                            let conflictMsg = "";
-                            if (conflictTypes.length === 1) {
-                                conflictMsg = conflictTypes[0];
-                            } else if (conflictTypes.length === 2) {
-                                conflictMsg = conflictTypes[0] + " or " + conflictTypes[1];
-                            } else {
-                                for (let i = 0; i < conflictTypes.length - 2; i++) {
-                                    conflictMsg += conflictTypes[i] + ",";
+            (spliceCore ? [
+                Object.keys(MaterialMatrix.globalMatrix.matrix[spliceCore]).map(function (material) {
+                    return m("div", {
+                        onclick: function (e) {
+                            let issues = checkValidMaterialCombination(spliceCore, drive, material, materials);
+                            if (issues.conflicts.length === 0 && issues.emptyAlgorithms.length === 0) {
+                                materials[drive] = material;
+                                let displayName = (material.length > 10 ? material.substr(0, 10) + "…" : material);
+                                if (MaterialMatrix.isDefaultProfile(spliceCore, material)) {
+                                    displayName = MaterialMatrix.globalMatrix.matrix[spliceCore][material].type;
                                 }
-                                conflictMsg += conflictTypes[conflictTypes.length - 2] + ", or " + conflictTypes[conflictTypes.length - 1];
-                            }
-                            displayWarningDialog({
-                                message: "Invalid material combination",
-                                detail: thisMaterialType + " cannot be spliced with " + conflictMsg + "."
-                            });
-                        } else {
-                            let emptyAlgs = issues.emptyAlgorithms;
-                            let conflictMsg = "";
-                            if (emptyAlgs.length === 1) {
-                                conflictMsg = " " + emptyAlgs[0] + ".";
-                            } else {
-                                for (let i = 0; i < emptyAlgs.length; i++) {
-                                    conflictMsg += "\n- " + emptyAlgs[i];
+                                document.getElementById("drive" + i + "materialSelect").title = material;
+                                document.getElementById("drive" + i + "materialLabel").innerText = displayName;
+                                document.getElementById("drive" + i + "materials").classList.add("hidden");
+                                document.getElementById("drive" + i + "materialNone").style.display = "";
+                                let materialsList = document.getElementById("drive" + i + "materials").children;
+                                Array.prototype.forEach.call(materialsList, function (el) {
+                                    el.dataset.checked = (el.innerText === material ? "1" : "0");
+                                });
+                                e.stopPropagation();
+                            } else if (issues.conflicts.length > 0) {
+                                let thisMaterialType = MaterialMatrix.globalMatrix.matrix[spliceCore][material].type;
+                                let conflictTypes = issues.conflicts.map(function (material) {
+                                    return MaterialMatrix.globalMatrix.matrix[spliceCore][material].type;
+                                });
+                                let conflictMsg = "";
+                                if (conflictTypes.length === 1) {
+                                    conflictMsg = conflictTypes[0];
+                                } else if (conflictTypes.length === 2) {
+                                    conflictMsg = conflictTypes[0] + " or " + conflictTypes[1];
+                                } else {
+                                    for (let i = 0; i < conflictTypes.length - 2; i++) {
+                                        conflictMsg += conflictTypes[i] + ",";
+                                    }
+                                    conflictMsg += conflictTypes[conflictTypes.length - 2] + ", or " + conflictTypes[conflictTypes.length - 1];
                                 }
+                                displayWarningDialog({
+                                    message: "Invalid material combination",
+                                    detail: thisMaterialType + " cannot be spliced with " + conflictMsg + "."
+                                });
+                            } else {
+                                let emptyAlgs = issues.emptyAlgorithms;
+                                let conflictMsg = "";
+                                if (emptyAlgs.length === 1) {
+                                    conflictMsg = " " + emptyAlgs[0] + ".";
+                                } else {
+                                    for (let i = 0; i < emptyAlgs.length; i++) {
+                                        conflictMsg += "\n- " + emptyAlgs[i];
+                                    }
+                                }
+                                displayWarningDialog({
+                                    message: "Empty splice settings",
+                                    detail: "Before using this combination, you must fill in splice settings for" + conflictMsg
+                                });
                             }
-                            displayWarningDialog({
-                                message: "Empty splice settings",
-                                detail: "Before using this combination, you must fill in splice settings for" + conflictMsg
-                            });
                         }
-                    }
-                }, material);
-            })
+                    }, material);
+                })
+            ] : [])
         ]);
     }
 }

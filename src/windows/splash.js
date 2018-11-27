@@ -16,16 +16,17 @@
     let buildName = env.displayName;
 
     m.render(document.getElementById("splash"), [
-        m("div.splashContent", [
-            m("div.splashLogo"),
-            m("h1", [
-                "Chroma",
-                m("span.version", appVersion)
-            ]),
-            (buildName ? m("h2.build", buildName) : []),
-            m("p.bottom", m.trust(copyright))
+        m("div.splashInner", [
+            m("div.splashContent", [
+                m("div.splashLogo"),
+                m("h1", [
+                    "Chroma",
+                    m("span.version", appVersion)
+                ]),
+                (buildName ? m("h2.build", buildName) : []),
+                m("p.bottom", m.trust(copyright))
+            ])
         ])
-
     ]);
 
     document.ondragover = document.ondrop = function (event) {

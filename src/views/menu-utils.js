@@ -8,6 +8,7 @@ const dialog = Electron.remote.dialog;
 
 const MaterialMatrix = require("../models/material-matrix");
 const MSF = require("../models/msf");
+const Printer = require("../models/printer");
 const profiles = require("../models/printer-profiles");
 const FormValidation = require("./form-validation");
 const modalUtils = require("./modal-utils");
@@ -297,6 +298,7 @@ function _generateMSFRandomView() {
     m.render(document.getElementById("errorText"), "");
 
     let printerIndex = 0;
+    let spliceCore = MaterialMatrix.spliceCores.P;
     let spliceLength = 0;
     let spliceLengthMin = 0;
     let spliceLengthMax = 0;
@@ -323,6 +325,16 @@ function _generateMSFRandomView() {
                                 onchange: function (event) {
                                     printerIndex = event.target.selectedIndex;
                                     FormValidation.resetValidationError(event.target.parentElement);
+                                    spliceCore = profiles.getProfileAtIndex(printerIndex).getSpliceCore();
+                                    m.render(document.getElementById("materialProfile"), [
+                                        Object.keys(MaterialMatrix.globalMatrix.matrix[spliceCore]).map(function (material) {
+                                            return m("option", {
+                                                value: material,
+                                                selected: materialProfile === material
+                                            }, (material.length > 80) ? material.substr(0, 80) + "..." : material);
+                                        })
+                                    ]);
+                                    document.getElementById("materialProfile").disabled = false;
                                 }
                             }, [
                                 m("option", {
@@ -343,22 +355,21 @@ function _generateMSFRandomView() {
                     m("td", [
                         m("div#materialProfileError.formError", [
                             m("select#materialProfile.formInput", {
+                                disabled: true,
                                 onchange: function (event) {
                                     materialProfile = event.target.value;
-                                    let materialType = MaterialMatrix.matrix.matrix[materialProfile].type;
-                                    if (MaterialMatrix.matrix.checkCompatibility(materialProfile, materialProfile)) {
+                                    let materialType = MaterialMatrix.globalMatrix.matrix[spliceCore][materialProfile].type;
+                                    if (MaterialMatrix.globalMatrix.checkCompatibility(spliceCore, materialProfile, materialProfile)) {
                                         FormValidation.resetValidationError(event.target.parentElement);
                                     } else {
                                         FormValidation.showValidationError(event.target.parentElement, materialType + " cannot be spliced with itself.");
                                     }
                                 }
                             }, [
-                                Object.keys(MaterialMatrix.matrix.matrix).map(function (material) {
-                                    return m("option", {
-                                        value: material,
-                                        selected: materialProfile === material
-                                    }, (material.length > 80) ? material.substr(0, 80) + "..." : material);
-                                })
+                                m("option", {
+                                    disabled: true,
+                                    selected: true
+                                }, "Select a printer first")
                             ])
                         ])
                     ])
@@ -599,8 +610,8 @@ function _generateMSFRandomView() {
 
                 let validationErrorsExist = false;
 
-                let materialType = MaterialMatrix.matrix.matrix[materialProfile].type;
-                if (!MaterialMatrix.matrix.checkCompatibility(materialProfile, materialProfile)) {
+                let materialType = MaterialMatrix.globalMatrix.matrix[spliceCore][materialProfile].type;
+                if (!MaterialMatrix.globalMatrix.checkCompatibility(spliceCore, materialProfile, materialProfile)) {
                     validationErrorsExist = true;
                     FormValidation.showValidationError(document.getElementById("materialProfileError"), materialType + " cannot be spliced with itself.");
                 }
@@ -636,22 +647,23 @@ function _generateMSFRandomView() {
                         title: "Save MSF file",
                         filters: [{
                             name: "MSF",
-                            extensions: ["msf"]
+                            extensions: [profiles.getProfileAtIndex(printerIndex).getMSFExtension(false)]
                         }]
                     }, function (outpath) {
                         if (outpath !== undefined) {
+                            let printer = profiles.getProfileAtIndex(printerIndex);
 
                             let basename = path.basename(outpath);
                             if (basename.length > 63) {
-                                let trimname = basename.slice(0, 59) + ".msf";
+                                let trimname = basename.slice(0, 59) + "." + printer.getMSFExtension(false);
                                 outpath = outpath.replace(basename, trimname);
                             }
 
                             const MSF = require("../models/msf");
 
                             let msf = new MSF();
-                            let printer = profiles.getProfileAtIndex(printerIndex);
-                            msf.printerProfile = printer.profileName;
+                            msf.version = printer.getMSFVersion();
+                            msf.printerProfile = printer;
                             msf.pulsesPerMM = printer.getPulsesPerMM();
                             msf.loadingOffset = printer.loadingOffset;
 
@@ -720,6 +732,7 @@ function _generateMSFEndOfSpoolView() {
     m.render(document.getElementById("errorText"), "");
 
     let printerIndex = 0;
+    let spliceCore = MaterialMatrix.spliceCores.P;
     let spoolCount = 2;
     let spool1Length = 0;
     let spool2Length = 0;
@@ -746,6 +759,16 @@ function _generateMSFEndOfSpoolView() {
                                 onchange: function (event) {
                                     printerIndex = event.target.selectedIndex;
                                     FormValidation.resetValidationError(event.target.parentElement);
+                                    spliceCore = profiles.getProfileAtIndex(printerIndex).getSpliceCore();
+                                    m.render(document.getElementById("materialProfile"), [
+                                        Object.keys(MaterialMatrix.globalMatrix.matrix[spliceCore]).map(function (material) {
+                                            return m("option", {
+                                                value: material,
+                                                selected: materialProfile === material
+                                            }, (material.length > 80) ? material.substr(0, 80) + "..." : material);
+                                        })
+                                    ]);
+                                    document.getElementById("materialProfile").disabled = false;
                                 }
                             }, [
                                 m("option", {
@@ -766,22 +789,21 @@ function _generateMSFEndOfSpoolView() {
                     m("td", [
                         m("div#materialProfileError.formError", [
                             m("select#materialProfile.formInput", {
+                                disabled: true,
                                 onchange: function (event) {
                                     materialProfile = event.target.value;
-                                    let materialType = MaterialMatrix.matrix.matrix[materialProfile].type;
-                                    if (MaterialMatrix.matrix.checkCompatibility(materialProfile, materialProfile)) {
+                                    let materialType = MaterialMatrix.globalMatrix.matrix[spliceCore][materialProfile].type;
+                                    if (MaterialMatrix.globalMatrix.checkCompatibility(spliceCore, materialProfile, materialProfile)) {
                                         FormValidation.resetValidationError(event.target.parentElement);
                                     } else {
                                         FormValidation.showValidationError(event.target.parentElement, materialType + " cannot be spliced with itself.");
                                     }
                                 }
                             }, [
-                                Object.keys(MaterialMatrix.matrix.matrix).map(function (material) {
-                                    return m("option", {
-                                        value: material,
-                                        selected: materialProfile === material
-                                    }, (material.length > 80) ? material.substr(0, 80) + "..." : material);
-                                })
+                                m("option", {
+                                    disabled: true,
+                                    selected: true
+                                }, "Select a printer first")
                             ])
                         ])
                     ])
@@ -936,8 +958,8 @@ function _generateMSFEndOfSpoolView() {
 
                 let validationErrorsExist = false;
 
-                let materialType = MaterialMatrix.matrix.matrix[materialProfile].type;
-                if (!MaterialMatrix.matrix.checkCompatibility(materialProfile, materialProfile)) {
+                let materialType = MaterialMatrix.globalMatrix.matrix[spliceCore][materialProfile].type;
+                if (!MaterialMatrix.globalMatrix.checkCompatibility(spliceCore, materialProfile, materialProfile)) {
                     validationErrorsExist = true;
                     FormValidation.showValidationError(document.getElementById("materialProfileError"), materialType + " cannot be spliced with itself.");
                 }
@@ -972,22 +994,23 @@ function _generateMSFEndOfSpoolView() {
                         title: "Save MSF file",
                         filters: [{
                             name: "MSF",
-                            extensions: ["msf"]
+                            extensions: [profiles.getProfileAtIndex(printerIndex).getMSFExtension(false)]
                         }]
                     }, function (outpath) {
                         if (outpath !== undefined) {
+                            let printer = profiles.getProfileAtIndex(printerIndex);
 
                             let basename = path.basename(outpath);
                             if (basename.length > 63) {
-                                let trimname = basename.slice(0, 59) + ".msf";
+                                let trimname = basename.slice(0, 59) + "." + printer.getMSFExtension(false);
                                 outpath = outpath.replace(basename, trimname);
                             }
 
                             const MSF = require("../models/msf");
 
                             let msf = new MSF();
-                            let printer = profiles.getProfileAtIndex(printerIndex);
-                            msf.printerProfile = printer.profileName;
+                            msf.version = printer.getMSFVersion();
+                            msf.printerProfile = printer;
                             msf.pulsesPerMM = printer.getPulsesPerMM();
                             msf.loadingOffset = printer.loadingOffset;
 
@@ -1034,6 +1057,7 @@ function _generateMSFPatternView() {
     m.render(document.getElementById("errorText"), "");
 
     let printerIndex = 0;
+    let spliceCore = MaterialMatrix.spliceCores.P;
     let pattern = [[0, 0]];
     let repeatCount = 0;
     let materialProfile = "Default PLA";
@@ -1085,6 +1109,16 @@ function _generateMSFPatternView() {
                                 onchange: function (event) {
                                     printerIndex = event.target.selectedIndex;
                                     FormValidation.resetValidationError(event.target.parentElement);
+                                    spliceCore = profiles.getProfileAtIndex(printerIndex).getSpliceCore();
+                                    m.render(document.getElementById("materialProfile"), [
+                                        Object.keys(MaterialMatrix.globalMatrix.matrix[spliceCore]).map(function (material) {
+                                            return m("option", {
+                                                value: material,
+                                                selected: materialProfile === material
+                                            }, (material.length > 80) ? material.substr(0, 80) + "..." : material);
+                                        })
+                                    ]);
+                                    document.getElementById("materialProfile").disabled = false;
                                 }
                             }, [
                                 m("option", {
@@ -1105,22 +1139,21 @@ function _generateMSFPatternView() {
                     m("td", [
                         m("div#materialProfileError.formError", [
                             m("select#materialProfile.formInput", {
+                                disabled: true,
                                 onchange: function (event) {
                                     materialProfile = event.target.value;
-                                    let materialType = MaterialMatrix.matrix.matrix[materialProfile].type;
-                                    if (MaterialMatrix.matrix.checkCompatibility(materialProfile, materialProfile)) {
+                                    let materialType = MaterialMatrix.globalMatrix.matrix[spliceCore][materialProfile].type;
+                                    if (MaterialMatrix.globalMatrix.checkCompatibility(spliceCore, materialProfile, materialProfile)) {
                                         FormValidation.resetValidationError(event.target.parentElement);
                                     } else {
                                         FormValidation.showValidationError(event.target.parentElement, materialType + " cannot be spliced with itself.");
                                     }
                                 }
                             }, [
-                                Object.keys(MaterialMatrix.matrix.matrix).map(function (material) {
-                                    return m("option", {
-                                        value: material,
-                                        selected: materialProfile === material
-                                    }, (material.length > 80) ? material.substr(0, 80) + "..." : material);
-                                })
+                                m("option", {
+                                    disabled: true,
+                                    selected: true
+                                }, "Select a printer first")
                             ])
                         ])
                     ])
@@ -1250,8 +1283,8 @@ function _generateMSFPatternView() {
 
                 let validationErrorsExist = false;
 
-                let materialType = MaterialMatrix.matrix.matrix[materialProfile].type;
-                if (!MaterialMatrix.matrix.checkCompatibility(materialProfile, materialProfile)) {
+                let materialType = MaterialMatrix.globalMatrix.matrix[spliceCore][materialProfile].type;
+                if (!MaterialMatrix.globalMatrix.checkCompatibility(spliceCore, materialProfile, materialProfile)) {
                     validationErrorsExist = true;
                     FormValidation.showValidationError(document.getElementById("materialProfileError"), materialType + " cannot be spliced with itself.");
                 }
@@ -1273,7 +1306,7 @@ function _generateMSFPatternView() {
                         title: "Save MSF file",
                         filters: [{
                             name: "MSF",
-                            extensions: ["msf"]
+                            extensions: [profiles.getProfileAtIndex(printerIndex).getMSFExtension(false)]
                         }]
                     }, function (outpath) {
                         if (outpath !== undefined) {
@@ -1282,7 +1315,8 @@ function _generateMSFPatternView() {
 
                             let msf = new MSF();
                             let printer = profiles.getProfileAtIndex(printerIndex);
-                            msf.printerProfile = printer.profileName;
+                            msf.version = printer.getMSFVersion();
+                            msf.printerProfile = printer;
                             msf.pulsesPerMM = printer.getPulsesPerMM();
                             msf.loadingOffset = printer.loadingOffset;
 
@@ -1336,6 +1370,7 @@ function _generateMSFGradientView() {
     m.render(document.getElementById("errorText"), "");
 
     let printerIndex = 0;
+    let spliceCore = MaterialMatrix.spliceCores.P;
     let firstSpliceLength = 0;
     let lastSpliceLength = 0;
     let minLength = 0;
@@ -1361,6 +1396,16 @@ function _generateMSFGradientView() {
                                 onchange: function (event) {
                                     printerIndex = event.target.selectedIndex;
                                     FormValidation.resetValidationError(event.target.parentElement);
+                                    spliceCore = profiles.getProfileAtIndex(printerIndex).getSpliceCore();
+                                    m.render(document.getElementById("materialProfile"), [
+                                        Object.keys(MaterialMatrix.globalMatrix.matrix[spliceCore]).map(function (material) {
+                                            return m("option", {
+                                                value: material,
+                                                selected: materialProfile === material
+                                            }, (material.length > 80) ? material.substr(0, 80) + "..." : material);
+                                        })
+                                    ]);
+                                    document.getElementById("materialProfile").disabled = false;
                                 }
                             }, [
                                 m("option", {
@@ -1381,22 +1426,21 @@ function _generateMSFGradientView() {
                     m("td", [
                         m("div#materialProfileError.formError", [
                             m("select#materialProfile.formInput", {
+                                disabled: true,
                                 onchange: function (event) {
                                     materialProfile = event.target.value;
-                                    let materialType = MaterialMatrix.matrix.matrix[materialProfile].type;
-                                    if (MaterialMatrix.matrix.checkCompatibility(materialProfile, materialProfile)) {
+                                    let materialType = MaterialMatrix.globalMatrix.matrix[spliceCore][materialProfile].type;
+                                    if (MaterialMatrix.globalMatrix.checkCompatibility(spliceCore, materialProfile, materialProfile)) {
                                         FormValidation.resetValidationError(event.target.parentElement);
                                     } else {
                                         FormValidation.showValidationError(event.target.parentElement, materialType + " cannot be spliced with itself.");
                                     }
                                 }
                             }, [
-                                Object.keys(MaterialMatrix.matrix.matrix).map(function (material) {
-                                    return m("option", {
-                                        value: material,
-                                        selected: materialProfile === material
-                                    }, (material.length > 80) ? material.substr(0, 80) + "..." : material);
-                                })
+                                m("option", {
+                                    disabled: true,
+                                    selected: true
+                                }, "Select a printer first")
                             ])
                         ])
                     ])
@@ -1516,8 +1560,8 @@ function _generateMSFGradientView() {
 
                 let validationErrorsExist = false;
 
-                let materialType = MaterialMatrix.matrix.matrix[materialProfile].type;
-                if (!MaterialMatrix.matrix.checkCompatibility(materialProfile, materialProfile)) {
+                let materialType = MaterialMatrix.globalMatrix.matrix[spliceCore][materialProfile].type;
+                if (!MaterialMatrix.globalMatrix.checkCompatibility(spliceCore, materialProfile, materialProfile)) {
                     validationErrorsExist = true;
                     FormValidation.showValidationError(document.getElementById("materialProfileError"), materialType + " cannot be spliced with itself.");
                 }
@@ -1557,7 +1601,7 @@ function _generateMSFGradientView() {
                         title: "Save MSF file",
                         filters: [{
                             name: "MSF",
-                            extensions: ["msf"]
+                            extensions: [profiles.getProfileAtIndex(printerIndex).getMSFExtension(false)]
                         }]
                     }, function (outpath) {
                         if (outpath !== undefined) {
@@ -1566,7 +1610,8 @@ function _generateMSFGradientView() {
 
                             let msf = new MSF();
                             let printer = profiles.getProfileAtIndex(printerIndex);
-                            msf.printerProfile = printer.profileName;
+                            msf.version = printer.getMSFVersion();
+                            msf.printerProfile = printer;
                             msf.pulsesPerMM = printer.getPulsesPerMM();
                             msf.loadingOffset = printer.loadingOffset;
 
@@ -1624,10 +1669,113 @@ function _generateMSFGradientView() {
 
 }
 
-function getOutputFileGrid(printFilePath, msfPath, twoRows = false) {
-    let isCSF = (path.extname(msfPath).toLowerCase() === ".csf");
+function getOutputFileGrid(printerProfile, printFilePath, msfPath, twoRows = false) {
+    let msfAsset = path.extname(msfPath).slice(1).toUpperCase();
+    let paletteAsset;
+    if (printerProfile.paletteType === Printer.PaletteTypes.Palette2) {
+        paletteAsset = "palette2";
+    } else if (printerProfile.paletteType === Printer.PaletteTypes.Palette2Pro) {
+        paletteAsset = "palette2pro";
+    } else {
+        paletteAsset = "palette";
+    }
     let showFileLabel = "Show in " + (process.platform === "darwin" ? "Finder" : "Explorer");
-    if (twoRows) {
+    if (printerProfile.isIntegratedMSF()) {
+        // single file entry, with CANVAS Hub
+        return m("table.outputFileGridOneRow", [
+            m("tbody", [
+                m("tr", [
+                    m("td"),
+                    m("td", {
+                        style: {
+                            width: "50px"
+                        }
+                    }, [
+                        m("div.fileIconPreviewLarge", {
+                            title: showFileLabel,
+                            style: {
+                                cursor: "pointer"
+                            },
+                            config: function (el) {
+                                Electron.remote.app.getFileIcon(printFilePath, function (err, icon) {
+                                    if (!err) {
+                                        let dataURL = icon.toDataURL({
+                                            scaleFactor: 3.0
+                                        });
+                                        el.style.backgroundImage = "url(" + dataURL + ")";
+                                    }
+                                });
+                            },
+                            onclick: function (e) {
+                                e.target.blur();
+                                Electron.shell.showItemInFolder(printFilePath);
+                            }
+                        })
+                    ]),
+                    m("td.outputFileGridArrowBlue"),
+                    m("td", {
+                        style: {
+                            "background-image": "url('../assets/canvasHub.svg')",
+                            "background-size": "contain",
+                            "background-position": "center center",
+                            "background-repeat": "no-repeat",
+                            "width": "64px",
+                            "height": "80px"
+                        }
+                    }),
+                    m("td")
+                ]),
+                m("tr", [
+                    m("td.fileGridName", {
+                        colspan: 5,
+                        style: {
+                            "padding-top": "10px",
+                            "padding-bottom": "2px"
+                        }
+                    }, [
+                        m("span", {
+                            title: showFileLabel,
+                            style: {
+                                cursor: "pointer"
+                            },
+                            onclick: function (e) {
+                                e.target.blur();
+                                Electron.shell.showItemInFolder(printFilePath);
+                            }
+                        }, path.basename(printFilePath))
+                    ])
+                ]),
+                m("tr", [
+                    m("td", {
+                        colspan: 5,
+                        style: {
+                            "font-size": "0.8em"
+                        }
+                    }, [
+                        m("span", "Upload this file to CANVAS Hub")
+                    ])
+                ]),
+                m("tr", [
+                    m("td", {
+                        colspan: 5
+                    }, [
+                        m("button", {
+                            style: {
+                                "margin-top": "4px",
+                                "font-size": "0.75em",
+                                cursor: "pointer",
+                                padding: "3px 6px"
+                            },
+                            onclick: function (e) {
+                                e.target.blur();
+                                Electron.shell.showItemInFolder(printFilePath);
+                            }
+                        }, showFileLabel)
+                    ])
+                ])
+            ])
+        ]);
+    } else if (twoRows) {
         return m("table.outputFileGridOneRow", [
             m("tbody", [
                 m("tr", [
@@ -1641,7 +1789,7 @@ function getOutputFileGrid(printFilePath, msfPath, twoRows = false) {
                             title: showFileLabel,
                             style: {
                                 cursor: "pointer",
-                                "background-image": "url('../assets/" + (isCSF ? "CSF" : "MSF") + ".svg')",
+                                "background-image": "url('../assets/" + msfAsset + ".svg')",
                                 "background-size": "150%"
                             },
                             onclick: function (e) {
@@ -1653,11 +1801,11 @@ function getOutputFileGrid(printFilePath, msfPath, twoRows = false) {
                     m("td.outputFileGridArrowPurple"),
                     m("td", {
                         style: {
-                            "background-image": "url('../assets/palette.svg')",
+                            "background-image": "url('../assets/" + paletteAsset + ".svg')",
                             "background-size": "contain",
                             "background-position": "center center",
                             "background-repeat": "no-repeat",
-                            "width": "50px",
+                            "width": printerProfile.isPalette2() ? "70px" : "50px",
                             "height": "80px"
                         }
                     }),
@@ -1815,7 +1963,7 @@ function getOutputFileGrid(printFilePath, msfPath, twoRows = false) {
                             title: showFileLabel,
                             style: {
                                 cursor: "pointer",
-                                "background-image": "url('../assets/" + (isCSF ? "CSF" : "MSF") + ".svg')",
+                                "background-image": "url('../assets/" + msfAsset + ".svg')",
                                 "background-size": "150%"
                             },
                             onclick: function (e) {
@@ -1827,11 +1975,11 @@ function getOutputFileGrid(printFilePath, msfPath, twoRows = false) {
                     m("td.outputFileGridArrowPurple"),
                     m("td", {
                         style: {
-                            "background-image": "url('../assets/palette.svg')",
+                            "background-image": "url('../assets/" + paletteAsset + ".svg')",
                             "background-size": "contain",
                             "background-position": "center center",
                             "background-repeat": "no-repeat",
-                            "width": "50px",
+                            "width": printerProfile.isPalette2() ? "70px" : "50px",
                             "height": "80px"
                         }
                     }),
@@ -2052,24 +2200,26 @@ function displayPrintSummary(print, msf, printFilePath, msfPath) {
                         })
                     ])
                 ]),
-                m("a", {
-                    href: "#",
-                    style: {
-                        float: "right",
-                        "margin-top": "15px",
-                        "margin-right": "15px",
-                        "text-decoration": "none"
-                    },
-                    onclick: function (event) {
-                        event.preventDefault();
-                        event.stopPropagation();
-                        SetupView.openPrintOffboarding(print, msf, printFilePath, msfPath);
-                    }
-                }, "What do I do now?"),
+                (print._printerProfile.isPalette2() ? [] : [
+                    m("a", {
+                        href: "#",
+                        style: {
+                            float: "right",
+                            "margin-top": "15px",
+                            "margin-right": "15px",
+                            "text-decoration": "none"
+                        },
+                        onclick: function (event) {
+                            event.preventDefault();
+                            event.stopPropagation();
+                            SetupView.openPrintOffboarding(print, msf, printFilePath, msfPath);
+                        }
+                    }, "What do I do now?")
+                ]),
                 m("h2", "Ready to Print!"),
                 m("br"),
 
-                getOutputFileGrid(printFilePath, msfPath),
+                getOutputFileGrid(print._printerProfile, printFilePath, msfPath),
 
                 m("table", [
                     m("tbody", [

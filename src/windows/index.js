@@ -93,7 +93,7 @@
             return;
         }
         let extension = path.extname(filepath).substr(1).toLowerCase();
-        if (extension === "msf" || extension === "csf") {
+        if (extension === "msf" || extension === "csf" || extension === "maf") {
             msfEditor.openEditor(filepath);
         } else if (profiles.getActiveProfile().inputParsers.indexOf(extension) >= 0) {
             Postprocessor.openFile(filepath);
@@ -125,7 +125,7 @@
         }
         if (event.dataTransfer.files.length === 1) {
             let extension = path.extname(event.dataTransfer.files[0].name).substr(1).toLowerCase();
-            if (extension === "msf" || extension === "csf") {
+            if (extension === "msf" || extension === "csf" || extension === "maf") {
                 msfEditor.openEditor(event.dataTransfer.files[0].path);
             }
             if (profiles.getActiveProfile().inputParsers.indexOf(extension) >= 0) {
