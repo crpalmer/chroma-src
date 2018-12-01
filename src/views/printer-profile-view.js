@@ -5982,6 +5982,7 @@ function openCalibrationWizard(tempProfile, editReference, closeAfter) {
                                                 // create a calibration MSF (CSF) for Palette
                                                 const MSF = require("../models/msf");
                                                 let msf = new MSF();
+                                                msf.printerProfile = tempProfile;
                                                 msf.colorsUsed = [10, 1, 1, 0];
                                                 msf.setMaterials(["Default PLA", "Default PLA", "Default PLA", null]);
                                                 msf.pulsesPerMM = 30;
